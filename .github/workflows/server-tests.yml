@@ -2,9 +2,9 @@ name: CI/CD Pipeline — HAULOPS
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, staging, dev]
   pull_request:
-    branches: [main]
+    branches: [main, staging]
 
 jobs:
   # ============================================================
@@ -104,7 +104,34 @@ jobs:
           echo "=================================================="
 
   # ============================================================
-  # Job 4: Notifikasi jika push ke branch dev (bukan main)
+  # Job 4: Deploy Trigger STAGING (hanya berjalan di branch staging)
+  # Butuh service Render/Railway + DB Supabase terpisah utk staging.
+  # ============================================================
+  notify-staging:
+    name: 🧪 Deploy — Staging (staging only)
+    needs: [backend-typecheck, frontend-build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+
+    steps:
+      - name: Ringkasan Deployment Staging
+        run: |
+          echo "=================================================="
+          echo "✅ CI PASSED — Deploy STAGING sedang berjalan"
+          echo "=================================================="
+          echo "Commit : ${{ github.sha }}"
+          echo "Oleh   : ${{ github.actor }}"
+          echo ""
+          echo "Pastikan sudah ada service terpisah utk staging:"
+          echo "  🎨 Render  → backend staging (branch=staging)"
+          echo "  🚂 Railway → frontend staging (branch=staging)"
+          echo "  🟩 Supabase→ database staging (project/DB terpisah)"
+          echo ""
+          echo "Promosi: dev → staging → main (production)."
+          echo "=================================================="
+
+  # ============================================================
+  # Job 5: Notifikasi jika push ke branch dev (CI only, tanpa deploy)
   # ============================================================
   notify-dev:
     name: ℹ️ Dev Branch — CI Only
@@ -119,5 +146,6 @@ jobs:
           echo "✅ CI PASSED di branch 'dev'"
           echo "=================================================="
           echo "Deploy TIDAK dijalankan untuk branch dev."
-          echo "Buat Pull Request ke branch 'main' untuk deploy."
+          echo "Alur promosi: dev → staging → main."
+          echo "Buat Pull Request ke 'staging' untuk lanjut."
           echo "=================================================="

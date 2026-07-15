@@ -203,13 +203,29 @@ GitHub Actions berjalan otomatis:
                                       └── prisma migrate deploy (otomatis)
 ```
 
-### Perilaku per Branch
+### Strategi 3 Branch (Environment)
 
-| Branch | GitHub Actions | Railway | Render |
-|--------|---------------|---------|--------|
-| `dev` | ✅ CI berjalan | ❌ Tidak deploy | ❌ Tidak deploy |
-| `main` | ✅ CI berjalan | ✅ Auto redeploy | ✅ Auto redeploy |
-| Pull Request ke `main` | ✅ CI berjalan | ❌ Tidak deploy | ❌ Tidak deploy |
+Alur promosi: **`dev` → `staging` → `main`**.
+
+| Branch | Peran | GitHub Actions | Deploy (Railway + Render) |
+|--------|-------|---------------|---------------------------|
+| `dev` | Integrasi fitur | ✅ CI (typecheck + build) | ❌ Tidak deploy |
+| `staging` | Pra-produksi / QA | ✅ CI | ✅ Deploy ke **environment staging** |
+| `main` | Produksi | ✅ CI | ✅ Deploy ke **environment produksi** |
+| PR ke `staging` / `main` | Review | ✅ CI | ❌ Tidak deploy |
+
+> [!IMPORTANT]
+> Agar `staging` benar-benar men-deploy terpisah dari produksi, buat **service
+> terpisah** di tiap platform yang dipatok ke branch `staging`:
+> - **Render**: service backend kedua (Settings → Branch = `staging`), dengan
+>   env sendiri (idealnya `DATABASE_URL`/`DIRECT_URL` ke **project/DB Supabase
+>   staging** yang terpisah agar data produksi aman).
+> - **Railway**: service frontend kedua (Deploy branch = `staging`), `VITE_API_URL`
+>   diarahkan ke origin backend staging.
+> - **Supabase**: project/database staging terpisah (opsional tapi disarankan).
+>
+> Tanpa service terpisah, hanya `main` yang otomatis ter-deploy; `staging`/`dev`
+> tetap menjalankan CI sebagai gerbang kualitas.
 
 ---
 
