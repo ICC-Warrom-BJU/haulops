@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "BBMLog" ADD COLUMN     "fuelTypeId" TEXT;
+
+-- AddForeignKey
+ALTER TABLE "BBMLog" ADD CONSTRAINT "BBMLog_fuelTypeId_fkey" FOREIGN KEY ("fuelTypeId") REFERENCES "FuelType"("id") ON DELETE NO ACTION ON UPDATE CASCADE;

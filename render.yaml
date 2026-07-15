@@ -1,0 +1,45 @@
+# render.yaml — Render.com Blueprint untuk HAULOPS Backend
+# Taruh file ini di ROOT repository (sejajar folder scaf/)
+# Render akan membaca file ini secara otomatis saat kamu import repo.
+
+services:
+  - type: web
+    name: haulops-server
+    runtime: docker
+    dockerfilePath: ./scaf/packages/server/Dockerfile.prod
+    dockerContext: ./scaf/packages/server
+
+    # Render Free Tier menggunakan region Oregon (us-west-2)
+    region: oregon
+    plan: free
+
+    # Health check agar Render tahu server sudah siap (route asli = /api/health)
+    healthCheckPath: /api/health
+
+    # Environment variables — nilai diisi manual di Render dashboard
+    # atau bisa di-set lewat Render Environment Groups
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4001
+      - key: DATABASE_URL
+        # Ambil dari Supabase: Settings > Database > Connection String (URI)
+        # Gunakan connection string versi "Transaction pooler" (port 6543) untuk production
+        sync: false
+      - key: DIRECT_URL
+        # Session Pooler / Direct (port 5432) — WAJIB untuk `prisma migrate deploy`
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true   # Render akan auto-generate nilai acak yang aman
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: ADMIN_USERNAME
+        value: admin          # akun admin awal (bootstrap first-run)
+      - key: ADMIN_PASSWORD
+        # WAJIB diisi password kuat; bila kosong dipakai default 'admin' (tidak aman)
+        sync: false
+      - key: CORS_ORIGIN
+        # Isi dengan URL frontend Railway-mu setelah deploy, contoh:
+        # https://haulops-web.up.railway.app
+        sync: false

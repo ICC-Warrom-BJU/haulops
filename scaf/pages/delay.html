@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delay — Hauling Monitor</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="main-wrapper">
+  <div id="topbarContainer"></div>
+  <main class="page-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Manajemen Delay</h1>
+        <p>Pencatatan dan monitoring delay operasional per komponen · Shift Pagi 07 Jun</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="openModal('delayFleetModal')">🔴 Input Delay Fleet</button>
+        <button class="btn btn-gold" onclick="openModal('delayUnitModal')">🟡 Input Delay Per Unit</button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Dari Tanggal</label>
+        <input class="form-control" type="date" id="filterDari" value="2026-06-01" style="font-size:12px">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Sampai Tanggal</label>
+        <input class="form-control" type="date" id="filterSampai" value="2026-06-07" style="font-size:12px">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Shift</label>
+        <select class="form-control" style="font-size:12px">
+          <option>Semua Shift</option>
+          <option>Shift Pagi (07:00–17:00)</option>
+          <option>Shift Malam (19:00–07:00)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Scope</label>
+        <select class="form-control" style="font-size:12px">
+          <option>Semua Scope</option>
+          <option>Fleet Wide</option>
+          <option>Per Unit</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Kategori</label>
+        <select class="form-control" style="font-size:12px">
+          <option>Semua Kategori</option>
+          <option>Cuaca</option>
+          <option>Operasional</option>
+          <option>Mekanik</option>
+          <option>Administrasi</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="showToast('Filter diterapkan (mock)')">Terapkan Filter</button>
+      <button class="btn btn-ghost" onclick="showToast('Filter direset (mock)')">Reset</button>
+    </div>
+
+    <div class="card mb-20">
+      <div class="card-header">
+        <span class="card-title">Realisasi vs Budget Delay — Periode 01–07 Jun 2026</span>
+        <span class="badge badge-pending" id="overBudgetBadge"></span>
+      </div>
+      <div class="card-body">
+        <div id="budgetGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Log Delay — Shift Pagi</span>
+        <div style="display:flex;gap:8px">
+          <select class="filter-select"><option>Semua Scope</option><option>Fleet Wide</option><option>Per Unit</option></select>
+          <select class="filter-select"><option>Semua Kategori</option><option>Cuaca</option><option>Operasional</option><option>Mekanik</option><option>Administrasi</option></select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tanggal</th><th>Jenis Delay</th><th>Kategori</th><th>Scope</th><th>Start Delay</th><th>Close Delay</th><th>Selesai</th><th>Durasi</th><th>Budget</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="delayLogBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL: Delay Fleet -->
+<div class="modal-overlay" id="delayFleetModal">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <span class="modal-title">🔴 Input Delay Fleet Wide</span>
+      <button class="modal-close" onclick="closeModal('delayFleetModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info">Delay Fleet Wide berdampak ke semua unit DT aktif. Anda dapat uncheck unit yang tidak terdampak.</div>
+      <div class="form-row col-2">
+        <div class="form-group">
+          <label class="form-label">Jenis Delay <span class="req">*</span></label>
+          <select class="form-control" id="fleetDelayType">
+            <option>-- Pilih Jenis Delay --</option>
+            <optgroup label="🌧 Cuaca — Fleet">
+              <option>Hujan (Budget: 60 mnt)</option>
+              <option>Jalan Licin / Slippery (45 mnt)</option>
+              <option>Genangan / Banjir (90 mnt)</option>
+              <option>Kabut / Jarak Pandang Rendah (30 mnt)</option>
+            </optgroup>
+            <optgroup label="⚙ Operasional — Fleet">
+              <option>Buka Tutup Pit (30 mnt)</option>
+              <option>Buka Tutup Jalan (30 mnt)</option>
+              <option>Survey / Pematokan (45 mnt)</option>
+            </optgroup>
+            <optgroup label="📋 Administrasi — Fleet">
+              <option>Safety Talk / P5M (30 mnt) — Tidak kena PA</option>
+              <option>Apel / Briefing (20 mnt) — Tidak kena PA</option>
+            </optgroup>
+            <optgroup label="📌 Lainnya">
+              <option>Lainnya — Fleet Wide</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Budget Waktu</label>
+          <input class="form-control" value="60 menit" disabled style="background:var(--gold-pale);font-weight:600">
+        </div>
+      </div>
+      <div class="form-row col-2">
+        <div class="form-group"><label class="form-label">Jam Mulai <span class="req">*</span></label><input class="form-control" type="datetime-local" id="fleetJamMulai"></div>
+        <div class="form-group"><label class="form-label">Jam Selesai <span class="req">*</span></label><input class="form-control" type="datetime-local" id="fleetJamSelesai"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;background:var(--cream-deep);border-radius:8px;padding:10px 14px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;font-size:13px">
+          <input type="checkbox" id="fleetFullDay" onchange="handleFullDayFleet(this)"> ☀ Full Day Delay (Jam Mulai = awal shift, Jam Selesai = akhir shift)
+        </label>
+      </div>
+      <div style="background:var(--cream-deep);border-radius:8px;padding:12px 14px;margin-bottom:16px;display:flex;gap:20px">
+        <div><span style="font-size:11px;color:var(--text-muted)">Durasi</span><div style="font-weight:700;font-size:18px" id="fleetDurasiDisplay">— mnt</div></div>
+        <div><span style="font-size:11px;color:var(--text-muted)">vs Budget</span><div style="font-weight:700;font-size:18px;color:var(--text-muted)" id="fleetVsBudget">—</div></div>
+      </div>
+      <div class="form-section-title">Start Delay (14 unit aktif)</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.unit-check').forEach(c=>c.checked=true)">Pilih Semua</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.unit-check').forEach(c=>c.checked=false)">Batalkan Semua</button>
+      </div>
+      <div id="unitCheckGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:180px;overflow-y:auto"></div>
+      <div class="form-group mt-12">
+        <label class="form-label">Keterangan</label>
+        <textarea class="form-control" rows="2" placeholder="Deskripsi kejadian delay..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('delayFleetModal')">Batal</button>
+      <button class="btn btn-primary" onclick="simpanDelayFleet()">Simpan Delay Fleet</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Delay Unit -->
+<div class="modal-overlay" id="delayUnitModal">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <span class="modal-title">🟡 Input Delay Per Unit</span>
+      <button class="modal-close" onclick="closeModal('delayUnitModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row col-2">
+        <div class="form-group">
+          <label class="form-label">Unit DT <span class="req">*</span></label>
+          <select class="form-control"><option>-- Pilih Unit --</option><option>DT-001</option><option>DT-002</option><option>DT-003</option><option>DT-004</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Jenis Delay <span class="req">*</span></label>
+          <select class="form-control">
+            <option>-- Pilih Jenis Delay --</option>
+            <optgroup label="⚙ Mekanik">
+              <option>Breakdown / Kerusakan</option>
+              <option>Preventive Maintenance (PM)</option>
+              <option>Ganti Ban (Budget: 60 mnt)</option>
+              <option>Kerusakan Body / Bak</option>
+            </optgroup>
+            <optgroup label="⛽ Operasional">
+              <option>Pengisian BBM (Budget: 20 mnt)</option>
+              <option>Pergantian Operator (Budget: 15 mnt)</option>
+              <option>Menunggu Excavator / Loader (Budget: 20 mnt)</option>
+              <option>Antrian Timbangan / Dumping (Budget: 20 mnt)</option>
+              <option>Menunggu Izin / Permit</option>
+            </optgroup>
+            <optgroup label="📋 Administrasi">
+              <option>Istirahat / Makan (30 mnt) — Tidak kena PA</option>
+            </optgroup>
+            <optgroup label="📌 Lainnya">
+              <option>Lainnya — Per Unit</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+      <div class="form-row col-2">
+        <div class="form-group"><label class="form-label">Jam Mulai <span class="req">*</span></label><input class="form-control" type="datetime-local" id="unitJamMulai"></div>
+        <div class="form-group"><label class="form-label">Jam Selesai <span class="req">*</span></label><input class="form-control" type="datetime-local" id="unitJamSelesai"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;background:var(--cream-deep);border-radius:8px;padding:10px 14px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;font-size:13px">
+          <input type="checkbox" id="unitFullDay" onchange="handleFullDayUnit(this)"> ☀ Full Day Delay (Jam Mulai = awal shift, Jam Selesai = akhir shift)
+        </label>
+      </div>
+      <div style="background:var(--cream-deep);border-radius:8px;padding:12px 14px;margin-bottom:16px;display:flex;gap:20px">
+        <div><span style="font-size:11px;color:var(--text-muted)">Durasi</span><div style="font-weight:700;font-size:18px" id="unitDurasiDisplay">— mnt</div></div>
+        <div><span style="font-size:11px;color:var(--text-muted)">Budget</span><div style="font-weight:700;font-size:18px;color:var(--text-muted)" id="unitBudgetDisplay">— mnt</div></div>
+      </div>
+      <div class="form-group"><label class="form-label">Keterangan</label><textarea class="form-control" rows="2" placeholder="Deskripsi detail kejadian..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('delayUnitModal')">Batal</button>
+      <button class="btn btn-primary" onclick="simpanDelayUnit()">Simpan Delay</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+document.getElementById('sidebarContainer').innerHTML = renderSidebar('delay');
+document.getElementById('topbarContainer').innerHTML = renderTopbar('Delay Management');
+
+const budgetData = [
+  {name:'Hujan', kode:'RAIN', scope:'fleet', budget:60, real:80, kena:true},
+  {name:'Buka Tutup Pit', kode:'PIT_OPEN', scope:'fleet', budget:30, real:25, kena:true},
+  {name:'Buka Tutup Jalan', kode:'ROAD_CLOSE', scope:'fleet', budget:30, real:30, kena:true},
+  {name:'Safety Talk / P5M', kode:'SAFETY_TALK', scope:'fleet', budget:30, real:28, kena:false},
+  {name:'Apel / Briefing', kode:'APEL', scope:'fleet', budget:20, real:20, kena:false},
+  {name:'Pengisian BBM', kode:'FUELING', scope:'unit', budget:20, real:18, kena:true},
+  {name:'Menunggu Loader', kode:'WAITING_LOAD', scope:'unit', budget:20, real:35, kena:true},
+  {name:'Ganti Ban', kode:'TIRE', scope:'unit', budget:60, real:90, kena:true},
+];
+
+const overCount = budgetData.filter(d => d.real > d.budget).length;
+document.getElementById('overBudgetBadge').textContent = overCount + ' Over Budget';
+
+document.getElementById('budgetGrid').innerHTML = budgetData.map(d => {
+  const pct = Math.min(d.real / d.budget * 100, 100);
+  const over = d.real > d.budget;
+  return '<div style="background:' + (over ? 'rgba(248,215,218,0.3)' : 'white') + ';border:1px solid ' + (over ? 'rgba(220,38,38,0.2)' : 'var(--border)') + ';border-radius:10px;padding:14px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
+    '<div><div style="font-size:12px;font-weight:600">' + d.name + '</div>' +
+    '<div style="display:flex;gap:5px;margin-top:3px">' +
+    '<span class="badge badge-' + d.scope + '" style="font-size:9px;padding:1px 5px">' + d.scope.toUpperCase() + '</span>' +
+    (!d.kena ? '<span class="badge" style="background:#F0F0F0;color:#888;font-size:9px;padding:1px 5px">Tidak kena PA</span>' : '') +
+    '</div></div>' +
+    '<span class="badge badge-' + (over ? 'over' : 'ok') + '">' + d.real + 'm / ' + d.budget + 'm</span>' +
+    '</div>' +
+    '<div class="progress-bar-wrap"><div class="progress-bar ' + (over ? 'red' : 'green') + '" style="width:' + pct + '%"></div></div>' +
+    (over ? '<div style="font-size:10px;color:#842029;margin-top:5px">⚠ Melebihi budget ' + (d.real - d.budget) + ' menit</div>' : '') +
+    '</div>';
+}).join('');
+
+const delayLog = [
+  {name:'Hujan', kat:'Cuaca', scope:'fleet', unit:'14 unit', mulai:'07/06/2026 08:30', selesai:'07/06/2026 09:50', dur:80, budget:60, over:true, kena:true},
+  {name:'Buka Tutup Pit', kat:'Operasional', scope:'fleet', unit:'14 unit', mulai:'07/06/2026 07:15', selesai:'07/06/2026 07:40', dur:25, budget:30, over:false, kena:true},
+  {name:'Safety Talk', kat:'Administrasi', scope:'fleet', unit:'14 unit', mulai:'07/06/2026 06:00', selesai:'07/06/2026 06:28', dur:28, budget:30, over:false, kena:false},
+  {name:'Apel', kat:'Administrasi', scope:'fleet', unit:'14 unit', mulai:'07/06/2026 06:00', selesai:'07/06/2026 06:20', dur:20, budget:20, over:false, kena:false},
+  {name:'Ganti Ban', kat:'Mekanik', scope:'unit', unit:'DT-004', mulai:'07/06/2026 09:00', selesai:'07/06/2026 10:30', dur:90, budget:60, over:true, kena:true},
+  {name:'Pengisian BBM', kat:'Operasional', scope:'unit', unit:'DT-002', mulai:'07/06/2026 10:05', selesai:'07/06/2026 10:23', dur:18, budget:20, over:false, kena:true},
+  {name:'Menunggu Loader', kat:'Operasional', scope:'unit', unit:'DT-007', mulai:'07/06/2026 11:00', selesai:'07/06/2026 11:35', dur:35, budget:20, over:true, kena:true},
+  {name:'Buka Tutup Jalan', kat:'Operasional', scope:'fleet', unit:'14 unit', mulai:'07/06/2026 10:45', selesai:'07/06/2026 11:15', dur:30, budget:30, over:false, kena:true},
+];
+
+document.getElementById('delayLogBody').innerHTML = delayLog.map(d =>
+  '<tr>' +
+  '<td><strong>' + d.name + '</strong></td>' +
+  '<td><span class="badge badge-manual" style="font-size:10px">' + d.kat + '</span></td>' +
+  '<td><span class="badge badge-' + (d.scope === 'fleet' ? 'fleet' : 'unit') + '">' + (d.scope === 'fleet' ? '🔴 Fleet' : '🟡 Unit') + '</span></td>' +
+  '<td style="font-size:12px">' + d.unit + '</td>' +
+  '<td class="muted tnum">' + d.mulai + '</td>' +
+  '<td class="muted tnum">' + d.selesai + '</td>' +
+  '<td class="tnum"><strong>' + d.dur + ' mnt</strong></td>' +
+  '<td class="tnum muted">' + d.budget + ' mnt</td>' +
+  '<td><div style="display:flex;flex-direction:column;gap:2px">' +
+  '<span class="badge badge-' + (d.over ? 'over' : 'ok') + '">' + (d.over ? 'Over' : 'OK') + '</span>' +
+  (!d.kena ? '<span style="font-size:9px;color:var(--text-muted)">Tidak kena PA</span>' : '') +
+  '</div></td>' +
+  '<td><button class="btn btn-ghost btn-sm">✏</button></td>' +
+  '</tr>'
+).join('');
+
+// Unit checkboxes for fleet modal
+const unitList = ['DT-001','DT-002','DT-003','DT-004','DT-005','DT-006','DT-007','DT-008','DT-009','DT-010','DT-011','DT-012','DT-013','DT-014'];
+document.getElementById('unitCheckGrid').innerHTML = unitList.map(u =>
+  '<label style="display:flex;align-items:center;gap:6px;background:white;border:1px solid var(--border);border-radius:6px;padding:7px 10px;cursor:pointer;font-size:12px;font-weight:500">' +
+  '<input type="checkbox" class="unit-check" checked style="accent-color:var(--brown-dark)"> ' + u +
+  '</label>'
+).join('');
+
+function handleFullDayFleet(cb) {
+  if (cb.checked) {
+    document.getElementById('fleetJamMulai').value = '2026-06-07T07:00';
+    document.getElementById('fleetJamSelesai').value = '2026-06-07T17:00';
+    document.getElementById('fleetDurasiDisplay').textContent = '600 mnt (Full Day)';
+    document.getElementById('fleetVsBudget').textContent = '—';
+  } else {
+    document.getElementById('fleetJamMulai').value = '';
+    document.getElementById('fleetJamSelesai').value = '';
+    document.getElementById('fleetDurasiDisplay').textContent = '— mnt';
+    document.getElementById('fleetVsBudget').textContent = '—';
+  }
+}
+
+function handleFullDayUnit(cb) {
+  if (cb.checked) {
+    document.getElementById('unitJamMulai').value = '2026-06-07T07:00';
+    document.getElementById('unitJamSelesai').value = '2026-06-07T17:00';
+    document.getElementById('unitDurasiDisplay').textContent = '600 mnt (Full Day)';
+    document.getElementById('unitBudgetDisplay').textContent = '— mnt';
+  } else {
+    document.getElementById('unitJamMulai').value = '';
+    document.getElementById('unitJamSelesai').value = '';
+    document.getElementById('unitDurasiDisplay').textContent = '— mnt';
+    document.getElementById('unitBudgetDisplay').textContent = '— mnt';
+  }
+}
+
+function simpanDelayFleet() {
+  const mulai = document.querySelector('#delayFleetModal input[type=datetime-local]');
+  const selesai = document.querySelector('#delayFleetModal input[type=datetime-local]:last-of-type');
+  if (!mulai || !selesai || !mulai.value || !selesai.value) {
+    showToast('Isi Jam Mulai dan Jam Selesai terlebih dahulu','warn');
+    return;
+  }
+  const durasi = hitungDurasi(mulai.value, selesai.value);
+  if (durasi <= 0) {
+    showToast('Jam Selesai harus setelah Jam Mulai','warn');
+    return;
+  }
+  if (durasi > 600) {
+    showToast('Total delay melebihi 10 jam (600 menit)! Harap periksa kembali.','warn');
+    return;
+  }
+  closeModal('delayFleetModal');
+  showToast('Delay Fleet berhasil disimpan (14 unit, ' + durasi + ' mnt)');
+}
+
+function hitungDurasi(mulai, selesai) {
+  const ms = new Date(selesai) - new Date(mulai);
+  return ms > 0 ? Math.round(ms / 60000) : 0;
+}
+
+function simpanDelayUnit() {
+  const mulai = document.querySelector('#delayUnitModal input[type=datetime-local]');
+  const selesai = document.querySelector('#delayUnitModal input[type=datetime-local]:last-of-type');
+  const unit = document.querySelector('#delayUnitModal select');
+  if (!mulai || !selesai || !mulai.value || !selesai.value) {
+    showToast('Isi Jam Mulai dan Jam Selesai terlebih dahulu','warn');
+    return;
+  }
+  const durasi = hitungDurasi(mulai.value, selesai.value);
+  if (durasi <= 0) {
+    showToast('Jam Selesai harus setelah Jam Mulai','warn');
+    return;
+  }
+  // Validasi max 10 jam per unit per hari (sederhana: asumsi satu input dulu)
+  if (durasi > 600) {
+    showToast('Total delay melebihi 10 jam (600 menit)! Harap periksa kembali.','warn');
+    return;
+  }
+  closeModal('delayUnitModal');
+  showToast('Delay per unit berhasil disimpan (' + durasi + ' mnt)');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "hauling-ops-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace packages/web run dev -- --host 0.0.0.0",
+    "dev:server": "npm --workspace packages/server run dev",
+    "build": "npm --workspace packages/web run build && npm --workspace packages/server run build"
+  }
+}

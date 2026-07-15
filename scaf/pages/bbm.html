@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BBM — HAULOPS</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    .cell-input {
+      width: 100%; padding: 6px 6px; border: 1px solid transparent; border-radius: 4px;
+      background: transparent; font-family: 'DM Sans', sans-serif; font-size: 12px;
+      color: var(--text-primary); outline: none; transition: all .15s; box-sizing: border-box;
+    }
+    .cell-input:focus { border-color: var(--brown-mid); background: white; }
+    .cell-input:hover { border-color: var(--border-strong); }
+    .cell-select {
+      width: 100%; padding: 6px 6px; border: 1px solid transparent; border-radius: 4px;
+      background: transparent; font-family: 'DM Sans', sans-serif; font-size: 12px;
+      color: var(--text-primary); outline: none; cursor: pointer; transition: all .15s; box-sizing: border-box;
+    }
+    .cell-select:focus { border-color: var(--brown-mid); background: white; }
+    .cell-select:hover { border-color: var(--border-strong); }
+    .cell-checkbox { width: 16px; height: 16px; accent-color: var(--brown-dark); cursor: pointer; }
+    .grid-table th { padding: 9px 8px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--text-secondary); white-space: nowrap; border-bottom: 2px solid var(--cream-border); }
+    .grid-table td { padding: 4px 4px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .grid-table tr:hover { background: var(--bg-hover); }
+  </style>
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="main-wrapper">
+  <div id="topbarContainer"></div>
+  <main class="page-content">
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Manajemen BBM</h1>
+        <p>Pencatatan konsumsi bahan bakar · Ratio L/Ton, L/Jam, dan Km/Liter per unit per shift</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-gold" onclick="openModal('inputBBMModal')">+ Input Pengisian BBM</button>
+      </div>
+    </div>
+
+    <!-- Summary KPI -->
+    <div id="bbmKpi" class="stat-grid mb-20"></div>
+
+    <!-- Ratio Summary Cards -->
+    <div id="ratioSummary" class="grid-2 mb-20"></div>
+
+    <!-- Filters -->
+    <div class="toolbar mb-16">
+      <div class="toolbar-left" style="flex-wrap:wrap;gap:8px">
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="date" class="filter-select" value="2026-06-07">
+          <span style="font-size:12px;color:var(--text-muted)">s/d</span>
+          <input type="date" class="filter-select" value="2026-06-07">
+        </div>
+        <select class="filter-select"><option>Semua Branch</option><option>Project NPM Konawe</option><option>Project CLM Luwu Raya</option><option>Project PPS Sultra</option></select>
+        <select class="filter-select"><option>Semua Shift</option><option>Shift Pagi (07:00–17:00)</option><option>Shift Malam (19:00–07:00)</option></select>
+        <select class="filter-select"><option>Semua Unit</option><option>DT-001</option><option>DT-002</option><option>DT-003</option><option>DT-004</option><option>DT-005</option><option>DT-006</option><option>DT-007</option><option>DT-008</option><option>DT-009</option><option>DT-010</option></select>
+        <select class="filter-select"><option>Semua Tipe Unit</option><option>DT Kecil</option><option>DT Sedang</option><option>DT Besar</option></select>
+        <select class="filter-select"><option>Semua Lokasi Isi</option><option>Pool NPM</option><option>Pit A Fueling Station</option><option>Mobile Fuel Truck</option><option>Pool CLM</option><option>Pool PPS</option></select>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="showToast('Data BBM diekspor')">⬇ Export Excel</button>
+    </div>
+
+    <!-- BBM Table -->
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Shift</th>
+              <th>Branch</th>
+              <th>Unit</th>
+              <th>Tipe Unit</th>
+              <th>Operator BBM</th>
+              <th>Jam Pengisian</th>
+              <th>Lokasi Isi</th>
+              <th>Jumlah (L)</th>
+              <th>Odometer (km)</th>
+              <th>HM</th>
+              <th>Keterangan</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="bbmTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL: Input BBM — Grid Popup Besar (seperti Rit Operation) -->
+<div class="modal-overlay" id="inputBBMModal" data-no-overlay-close="true">
+  <div class="modal modal-lg" style="max-width:95vw;width:95vw;height:92vh;margin:2vh auto">
+    <div class="modal-header">
+      <span class="modal-title">Input Pengisian BBM — Multi Baris</span>
+      <button class="modal-close" onclick="closeModal('inputBBMModal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;height:calc(100% - 110px);overflow-y:auto">
+      <!-- Meta Section -->
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);background:var(--cream)">
+        <div class="meta-grid" style="grid-template-columns:repeat(4,1fr);gap:16px">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Branch</label>
+            <select class="form-control" id="bbmMetaBranch" style="font-size:12px">
+              <option>Project NPM Konawe</option>
+              <option>Project CLM Luwu Raya</option>
+              <option>Project PPS Sultra</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Tanggal <span class="req">*</span></label>
+            <input class="form-control" type="date" id="bbmMetaTanggal" value="2026-06-07" style="font-size:12px">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Shift <span class="req">*</span></label>
+            <select class="form-control" id="bbmMetaShift" style="font-size:12px">
+              <option>Shift Pagi (07:00–17:00)</option>
+              <option>Shift Malam (19:00–07:00)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid Toolbar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:white">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--text-secondary)">Data Pengisian BBM</span>
+          <span id="bbmRowCount" style="font-size:11px;color:var(--text-muted)">0 baris</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="fillDownBBM()">⬇ Isi ke Bawah</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteSelectedBBMRows()">🗑 Hapus</button>
+          <button class="btn btn-gold btn-sm" onclick="addBBMRow()">+ Baris Baru</button>
+        </div>
+      </div>
+
+      <!-- BBM Grid -->
+      <div style="overflow:auto;flex:1;max-height:calc(100vh - 300px)">
+        <table class="grid-table" style="min-width:1000px">
+          <thead>
+            <tr>
+              <th style="width:30px"><input type="checkbox" class="cell-checkbox" id="bbmSelectAll" onchange="toggleBBMSelectAll()"></th>
+              <th style="width:90px">Tanggal <span class="req">*</span></th>
+              <th style="width:120px">Shift <span class="req">*</span></th>
+              <th style="width:100px">Unit DT <span class="req">*</span></th>
+              <th style="width:100px">Operator BBM <span class="req">*</span></th>
+              <th style="width:70px">Jam <span class="req">*</span></th>
+              <th style="width:140px">Lokasi <span class="req">*</span></th>
+              <th style="width:80px">Liter <span class="req">*</span></th>
+              <th style="width:90px">Odometer <span class="req">*</span></th>
+              <th style="width:80px">HM</th>
+              <th style="width:auto">Keterangan</th>
+              <th style="width:50px">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="bbmGridBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Summary -->
+      <div style="display:flex;gap:16px;padding:10px 16px;border-top:2px solid var(--cream-border);background:var(--cream);flex-wrap:wrap">
+        <div><span style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted)">Baris</span><div style="font-size:15px;font-weight:700;color:var(--brown-dark)" id="bbmSumRows">0</div></div>
+        <div><span style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted)">Total Liter</span><div style="font-size:15px;font-weight:700;color:var(--brown-dark)" id="bbmSumLiter">0</div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('inputBBMModal')">Batal</button>
+      <button class="btn btn-primary" onclick="simpanBBMGrid()">💾 Simpan Semua</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+document.getElementById('sidebarContainer').innerHTML = renderSidebar('bbm');
+document.getElementById('topbarContainer').innerHTML = renderTopbar('Manajemen BBM');
+
+// KPI
+const bbmKpiData=[
+  {label:'Total BBM Hari Ini',value:'1.240',unit:'L',icon:'⛽',iconBg:'gold'},
+  {label:'Total Pengisian',value:'11',unit:'transaksi',icon:'🔢',iconBg:'brown'},
+  {label:'Unit Sudah Diisi',value:'11',unit:'/ 14 unit',icon:'🚛',iconBg:'amber'},
+  {label:'Budget BBM (hari ini)',value:'1.400',unit:'L (target)',icon:'🎯',iconBg:'green'},
+];
+document.getElementById('bbmKpi').innerHTML=bbmKpiData.map(k=>
+  '<div class="stat-card '+(k.iconBg==='gold'?'gold':'')+'">'+
+  '<div class="stat-icon '+k.iconBg+'">'+k.icon+'</div>'+
+  '<div class="stat-label">'+k.label+'</div>'+
+  '<div class="stat-value big">'+k.value+' <span style="font-size:13px;color:var(--text-muted)">'+k.unit+'</span></div>'+
+  '</div>'
+).join('');
+
+// Ratio summary cards
+const ratioData=[
+  {
+    title:'Fuel Ratio — Jam/L',
+    desc:'Jam operasi per liter BBM',
+    value:'0.054',unit:'jam/L',
+    formula:'Jam Operasi Aktual ÷ Total Liter',
+    budget:'0.050 jam/L',
+    status:'ok',
+    note:'Dalam batas normal'
+  },
+  {
+    title:'Fuel Ratio — Km/Liter',
+    desc:'Jarak tempuh per liter bahan bakar',
+    value:'3.2',unit:'km/L',
+    formula:'Total Km Tempuh ÷ Total Liter',
+    budget:'3.0 km/L',
+    status:'ok',
+    note:'Di atas target efisiensi',
+  },
+];
+document.getElementById('ratioSummary').innerHTML=ratioData.map(r=>
+  '<div class="card">'+
+  '<div class="card-body">'+
+  '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">'+
+  '<div>'+
+  '<div style="font-size:12px;font-weight:600;color:var(--text-primary)">'+r.title+'</div>'+
+  '<div style="font-size:11px;color:var(--text-muted);margin-top:2px">'+r.desc+'</div>'+
+  '</div>'+
+  '<span class="badge badge-'+(r.status==='ok'?'ok':'over')+'">'+( r.status==='ok'?'OK':'Over')+'</span>'+
+  '</div>'+
+  '<div style="font-family:\'DM Serif Display\',serif;font-size:32px;color:var(--brown-dark);margin-bottom:8px">'+
+  r.value+' <span style="font-size:16px;color:var(--text-muted)">'+r.unit+'</span>'+
+  '</div>'+
+  '<div style="font-size:11px;color:var(--text-muted);background:var(--cream);padding:6px 10px;border-radius:6px;font-family:monospace;margin-bottom:8px">'+r.formula+'</div>'+
+  '<div style="display:flex;justify-content:space-between;font-size:11px">'+
+  '<span style="color:var(--text-muted)">Budget: <strong>'+r.budget+'</strong></span>'+
+  '<span style="color:var(--status-approved-text)">'+r.note+'</span>'+
+  '</div>'+
+  '</div></div>'
+).join('');
+
+// BBM table data
+const bbmRows=[
+  {tgl:'07/06/2026',shift:'pagi',branch:'Kal. A',unit:'DT-001',tipe:'DT Kecil',opBbm:'Andi K.',jam:'06:45',lokasi:'Pool Kalimantan A',liter:88,odo:45820,hm:4250,ket:'Pengisian rutin awal shift'},
+  {tgl:'07/06/2026',shift:'pagi',branch:'Kal. A',unit:'DT-002',tipe:'DT Kecil',opBbm:'Andi K.',jam:'06:50',lokasi:'Pool Kalimantan A',liter:82,odo:38100,hm:3180,ket:'Pengisian rutin awal shift'},
+  {tgl:'07/06/2026',shift:'pagi',branch:'Kal. A',unit:'DT-003',tipe:'DT Kecil',opBbm:'Andi K.',jam:'06:48',lokasi:'Pool Kalimantan A',liter:92,odo:61200,hm:5820,ket:'Tangki hampir kosong'},
+  {tgl:'07/06/2026',shift:'pagi',branch:'Kal. A',unit:'DT-004',tipe:'DT Besar',opBbm:'Beny R.',jam:'06:40',lokasi:'Pit A Fueling Station',liter:145,odo:72100,hm:7210,ket:'Pengisian di area pit'},
+  {tgl:'07/06/2026',shift:'pagi',branch:'Kal. A',unit:'DT-005',tipe:'DT Kecil',opBbm:'Andi K.',jam:'07:05',lokasi:'Pool Kalimantan A',liter:85,odo:29400,hm:2940,ket:''},
+  {tgl:'07/06/2026',shift:'pagi',branch:'Kal. A',unit:'DT-006',tipe:'DT Kecil',opBbm:'Andi K.',jam:'07:10',lokasi:'Pool Kalimantan A',liter:78,odo:41200,hm:4120,ket:''},
+  {tgl:'07/06/2026',shift:'pagi',branch:'Kal. A',unit:'DT-004',tipe:'DT Besar',opBbm:'Beny R.',jam:'11:30',lokasi:'Mobile Fuel Truck',liter:120,odo:72185,hm:7218,ket:'Isi ulang tengah shift'},
+];
+
+document.getElementById('bbmTableBody').innerHTML=bbmRows.map(r=>
+  '<tr>'+
+  '<td style="font-size:11px">'+r.tgl+'</td>'+
+  '<td><span class="badge badge-'+r.shift+'" style="font-size:9px">'+r.shift+'</span></td>'+
+  '<td><span class="tag" style="font-size:10px">'+r.branch+'</span></td>'+
+  '<td><span class="tag">'+r.unit+'</span></td>'+
+  '<td class="muted" style="font-size:11px">'+r.tipe+'</td>'+
+  '<td style="font-size:12px">'+r.opBbm+'</td>'+
+  '<td class="tnum muted">'+r.jam+'</td>'+
+  '<td style="font-size:11px;color:var(--text-secondary)">'+r.lokasi+'</td>'+
+  '<td class="tnum"><strong>'+r.liter+' L</strong></td>'+
+  '<td class="tnum">'+r.odo.toLocaleString()+' km</td>'+
+  '<td class="tnum muted">'+r.hm.toLocaleString()+'</td>'+
+  '<td style="font-size:11px;color:var(--text-muted);max-width:160px">'+(r.ket||'—')+'</td>'+
+  '<td><button class="btn btn-ghost btn-sm" onclick="openModal(\'inputBBMModal\')">✏</button></td>'+
+  '</tr>'
+).join('');
+
+// BBM Grid state
+let bbmGridData = [];
+let bbmRowCounter = 0;
+
+const bbmUnits = ['DT-001','DT-002','DT-003','DT-004','DT-005','DT-006','DT-007'];
+const bbmOperators = ['Andi K.','Beny R.','Citra D.','Deni S.'];
+const bbmLokasis = ['Pool NPM','Pit A Fueling Station','Mobile Fuel Truck','Pool CLM','Pool PPS'];
+
+// Get last odometer & HM for a unit from saved history
+function getLastUnitRecord(unit) {
+  if (!unit) return { odo: 0, hm: '' };
+  // Search bbmRows (saved history) from newest to oldest
+  for (let i = bbmRows.length - 1; i >= 0; i--) {
+    if (bbmRows[i].unit === unit) return { odo: bbmRows[i].odo, hm: bbmRows[i].hm };
+  }
+  return { odo: 0, hm: '' };
+}
+
+function onUnitBBMChange(idx, value) {
+  if (idx < 0 || idx >= bbmGridData.length) return;
+  const row = bbmGridData[idx];
+  row.unit = value;
+  const last = getLastUnitRecord(value);
+  row.odo = last.odo;
+  row.hm = last.hm;
+  renderBBMGrid();
+}
+
+function addBBMRow(data) {
+  bbmRowCounter++;
+  const metaTgl = document.getElementById('bbmMetaTanggal').value || '2026-06-07';
+  const metaShift = document.getElementById('bbmMetaShift').value || 'Shift Pagi (07:00–17:00)';
+  bbmGridData.push({
+    id: 'BBM-'+bbmRowCounter,
+    tgl: metaTgl,
+    shift: metaShift,
+    unit: data?.unit || '',
+    operator: data?.operator || '',
+    jam: data?.jam || '07:00',
+    lokasi: data?.lokasi || '',
+    liter: data?.liter || 0,
+    odo: data?.odo || 0,
+    hm: data?.hm || '',
+    ket: data?.ket || ''
+  });
+  renderBBMGrid();
+}
+
+function deleteBBMRow(id) {
+  bbmGridData = bbmGridData.filter(r => r.id !== id);
+  renderBBMGrid();
+}
+
+function deleteSelectedBBMRows() {
+  const checks = document.querySelectorAll('#bbmGridBody .cell-checkbox:checked');
+  const ids = Array.from(checks).map(c => c.getAttribute('data-id')).filter(Boolean);
+  if (ids.length === 0) { showToast('Pilih baris yang akan dihapus','warn'); return; }
+  bbmGridData = bbmGridData.filter(r => !ids.includes(r.id));
+  renderBBMGrid();
+}
+
+function toggleBBMSelectAll() {
+  const all = document.getElementById('bbmSelectAll').checked;
+  document.querySelectorAll('#bbmGridBody .cell-checkbox').forEach(c => c.checked = all);
+}
+
+function fillDownBBM() {
+  const checked = document.querySelectorAll('#bbmGridBody .cell-checkbox:checked');
+  const ids = Array.from(checked).map(c => c.getAttribute('data-id'));
+  if (ids.length < 2) { showToast('Centang minimal 2 baris untuk isi ke bawah','warn'); return; }
+  // Find first checked index
+  const indices = ids.map(id => bbmGridData.findIndex(r => r.id === id)).filter(i => i >= 0).sort();
+  if (indices.length < 2) return;
+  const source = bbmGridData[indices[0]];
+  for (let i = 1; i < indices.length; i++) {
+    const target = bbmGridData[indices[i]];
+    target.shift = source.shift;
+    target.unit = source.unit;
+    target.operator = source.operator;
+    target.lokasi = source.lokasi;
+    target.ket = source.ket;
+  }
+  renderBBMGrid();
+}
+
+function renderBBMGrid() {
+  const tbody = document.getElementById('bbmGridBody');
+  if (bbmGridData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center muted" style="padding:24px">Belum ada baris. Klik <strong>+ Baris Baru</strong> untuk mulai.</td></tr>';
+    document.getElementById('bbmRowCount').textContent = '0 baris';
+    document.getElementById('bbmSumRows').textContent = '0';
+    document.getElementById('bbmSumLiter').textContent = '0';
+    return;
+  }
+  tbody.innerHTML = bbmGridData.map((r, i) =>
+    '<tr>' +
+    '<td style="text-align:center"><input type="checkbox" class="cell-checkbox" data-id="'+r.id+'" onchange="updateBBMSelectAllState()"></td>' +
+    '<td><input class="cell-input" type="date" value="'+r.tgl+'" onchange="bbmGridData['+i+'].tgl=this.value; updateBBMSummary()" style="font-size:12px"></td>' +
+    '<td><select class="cell-select" onchange="bbmGridData['+i+'].shift=this.value; updateBBMSummary()" style="font-size:12px">' +
+      '<option value="Shift Pagi (07:00–17:00)"'+(r.shift==='Shift Pagi (07:00–17:00)'?' selected':'')+'>Shift Pagi (07:00–17:00)</option>' +
+      '<option value="Shift Malam (19:00–07:00)"'+(r.shift==='Shift Malam (19:00–07:00)'?' selected':'')+'>Shift Malam (19:00–07:00)</option>' +
+    '</select></td>' +
+    '<td><select class="cell-select" onchange="onUnitBBMChange('+i+', this.value)" style="font-size:12px">' +
+      '<option value="">-- Unit --</option>' +
+      bbmUnits.map(u => '<option value="'+u+'"'+(r.unit===u?' selected':'')+'>'+u+'</option>').join('') +
+    '</select></td>' +
+    '<td><select class="cell-select" onchange="bbmGridData['+i+'].operator=this.value" style="font-size:12px">' +
+      '<option value="">-- Pilih --</option>' +
+      bbmOperators.map(o => '<option value="'+o+'"'+(r.operator===o?' selected':'')+'>'+o+'</option>').join('') +
+    '</select></td>' +
+    '<td><input class="cell-input" type="time" value="'+r.jam+'" onchange="bbmGridData['+i+'].jam=this.value" style="font-size:12px"></td>' +
+    '<td><select class="cell-select" onchange="bbmGridData['+i+'].lokasi=this.value" style="font-size:12px">' +
+      bbmLokasis.map(l => '<option value="'+l+'"'+(r.lokasi===l?' selected':'')+'>'+l+'</option>').join('') +
+    '</select></td>' +
+    '<td><input class="cell-input" type="number" step="0.1" value="'+r.liter+'" onchange="bbmGridData['+i+'].liter=parseFloat(this.value)||0; updateBBMSummary()" style="font-size:12px"></td>' +
+    '<td><input class="cell-input" type="number" value="'+r.odo+'" onchange="bbmGridData['+i+'].odo=parseFloat(this.value)||0" style="font-size:12px"></td>' +
+    '<td><input class="cell-input" type="number" value="'+(r.hm||'')+'" onchange="bbmGridData['+i+'].hm=this.value" style="font-size:12px" placeholder="—"></td>' +
+    '<td><input class="cell-input" value="'+r.ket+'" onchange="bbmGridData['+i+'].ket=this.value" style="font-size:12px" placeholder="Catatan"></td>' +
+    '<td style="text-align:center"><button class="btn btn-ghost btn-sm" onclick="deleteBBMRow(\''+r.id+'\')">✕</button></td>' +
+    '</tr>'
+  ).join('');
+  document.getElementById('bbmRowCount').textContent = bbmGridData.length + ' baris';
+  updateBBMSummary();
+}
+
+function updateBBMSummary() {
+  const total = bbmGridData.reduce((s, r) => s + (r.liter || 0), 0);
+  document.getElementById('bbmSumRows').textContent = bbmGridData.length;
+  document.getElementById('bbmSumLiter').textContent = total.toFixed(1) + ' L';
+}
+
+function updateBBMSelectAllState() {
+  const checks = document.querySelectorAll('#bbmGridBody .cell-checkbox');
+  const all = document.getElementById('bbmSelectAll');
+  all.checked = checks.length > 0 && Array.from(checks).every(c => c.checked);
+}
+
+function simpanBBMGrid() {
+  const errors = bbmGridData.filter(r => !r.unit || !r.operator || r.liter <= 0);
+  if (errors.length > 0) {
+    showToast(errors.length + ' baris memiliki validasi error (unit, operator, liter wajib)', 'warn');
+    return;
+  }
+  // Validate odometer >= last record for each unit
+  for (const r of bbmGridData) {
+    if (r.odo && r.odo > 0) {
+      const last = getLastUnitRecord(r.unit);
+      if (last.odo > 0 && r.odo < last.odo) {
+        showToast('Baris ' + r.id + ': Odometer (' + r.odo + ' km) harus >= odometer terakhir (' + last.odo + ' km) untuk unit ' + r.unit, 'warn');
+        return;
+      }
+    }
+  }
+  const metaBranch = document.getElementById('bbmMetaBranch').value || 'Project NPM Konawe';
+  const count = bbmGridData.length;
+  bbmGridData.forEach(r => {
+    bbmRows.push({
+      tgl: r.tgl.split('-').reverse().join('/'),
+      shift: r.shift.includes('Pagi') ? 'Pagi' : 'Malam',
+      branch: metaBranch,
+      unit: r.unit,
+      tipe: r.unit <= 'DT-003' ? 'DT Kecil' : 'DT Besar',
+      opBbm: r.operator,
+      jam: r.jam,
+      lokasi: r.lokasi,
+      liter: r.liter,
+      odo: r.odo,
+      hm: r.hm || 0,
+      ket: r.ket
+    });
+  });
+  document.getElementById('bbmTableBody').innerHTML = bbmRows.map(r =>
+    '<tr>' +
+    '<td style="font-size:11px">'+r.tgl+'</td>' +
+    '<td><span class="badge badge-'+r.shift+'" style="font-size:9px">'+r.shift+'</span></td>' +
+    '<td><span class="tag" style="font-size:10px">'+r.branch+'</span></td>' +
+    '<td><span class="tag">'+r.unit+'</span></td>' +
+    '<td class="muted" style="font-size:11px">'+r.tipe+'</td>' +
+    '<td style="font-size:12px">'+r.opBbm+'</td>' +
+    '<td class="tnum muted">'+r.jam+'</td>' +
+    '<td style="font-size:11px;color:var(--text-secondary)">'+r.lokasi+'</td>' +
+    '<td class="tnum"><strong>'+r.liter+' L</strong></td>' +
+    '<td class="tnum">'+r.odo.toLocaleString()+' km</td>' +
+    '<td class="tnum muted">'+(r.hm ? Number(r.hm).toLocaleString() : '—')+'</td>' +
+    '<td style="font-size:11px;color:var(--text-muted);max-width:160px">'+(r.ket||'—')+'</td>' +
+    '<td><button class="btn btn-ghost btn-sm" onclick="openModal(\'inputBBMModal\')">✏</button></td>' +
+    '</tr>'
+  ).join('');
+  bbmGridData = [];
+  closeModal('inputBBMModal');
+  showToast(count + ' baris BBM berhasil disimpan');
+}
+
+// ─── Guard: intercept overlay click → toast instead of close ─────
+document.addEventListener('click', function bbmGuard(e) {
+  const overlay = document.getElementById('inputBBMModal');
+  if (overlay && overlay.classList.contains('show') && e.target === overlay) {
+    showToast('Gunakan tombol "Simpan Semua" atau "Batal" untuk keluar', 'warn');
+  }
+});
+</script>
+</body>
+</html>

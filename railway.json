@@ -1,0 +1,16 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "scaf/packages/web/Dockerfile.prod",
+    "buildArgs": {
+      "VITE_API_URL": "$VITE_API_URL"
+    }
+  },
+  "deploy": {
+    "startCommand": null,
+    "healthcheckPath": "/",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 5
+  }
+}

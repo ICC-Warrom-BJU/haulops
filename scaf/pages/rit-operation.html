@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rit Operation — HAULOPS</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    /* Summary Pill */
+    .summary-pill{background:white;border:1px solid var(--border);border-radius:8px;padding:10px 16px;min-width:130px}
+    .summary-pill .sp-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px}
+    .summary-pill .sp-val{font-size:20px;font-weight:700;color:var(--text-primary);line-height:1.2;margin-top:2px}
+    .summary-pill .sp-sub{font-size:11px;color:var(--text-muted);margin-top:1px}
+    .prefix-badge{background:var(--gold-pale);color:var(--gold-dark);border:1px solid rgba(200,150,0,0.2);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;font-family:monospace}
+
+    /* Meta Section - Common fields at top */
+    .meta-section {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-card);
+    }
+    .meta-section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--brown-mid);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 900px) {
+      .meta-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* Inline Grid Styles */
+    .inline-grid-container {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+    .grid-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--cream);
+    }
+    .grid-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .grid-toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .grid-table-wrap {
+      overflow-x: auto;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    .grid-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .grid-table thead th {
+      background: var(--cream-deep);
+      padding: 10px 8px;
+      text-align: left;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      white-space: nowrap;
+      border-bottom: 2px solid var(--cream-border);
+      border-right: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .grid-table thead th:last-child { border-right: none; }
+    .grid-table tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+    }
+    .grid-table tbody tr:hover { background: var(--bg-hover); }
+    .grid-table tbody tr.validation-error {
+      background: rgba(220, 38, 38, 0.05);
+    }
+    .grid-table tbody tr.validation-error:hover {
+      background: rgba(220, 38, 38, 0.08);
+    }
+    .grid-table tbody td {
+      padding: 4px 6px;
+      vertical-align: middle;
+      border-right: 1px solid var(--border);
+    }
+    .grid-table tbody td:last-child { border-right: none; }
+
+    /* Inline cell inputs */
+    .cell-input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      color: var(--text-primary);
+      outline: none;
+      transition: all .15s;
+    }
+    .cell-input:focus {
+      border-color: var(--brown-mid);
+      background: white;
+      box-shadow: 0 0 0 2px rgba(158,123,85,0.12);
+    }
+    .cell-input:hover {
+      border-color: var(--border-strong);
+      background: rgba(255,255,255,0.5);
+    }
+    .cell-input:disabled {
+      background: var(--cream);
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+    .cell-input.computed {
+      background: var(--cream);
+      color: var(--brown-dark);
+      font-weight: 600;
+      cursor: default;
+    }
+    .cell-input.error {
+      border-color: #DC2626;
+      background: rgba(220,38,38,0.05);
+    }
+    .cell-select {
+      width: 100%;
+      padding: 6px 6px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      color: var(--text-primary);
+      outline: none;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .cell-select:focus {
+      border-color: var(--brown-mid);
+      background: white;
+    }
+    .cell-select:hover {
+      border-color: var(--border-strong);
+    }
+    .cell-checkbox {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--brown-dark);
+      cursor: pointer;
+    }
+
+    /* Auto-populated cell style */
+    .cell-auto { background: #f0f0f0 !important; cursor: default; }
+
+    /* Hide number spinners */
+    .cell-input[type=number]::-webkit-inner-spin-button,
+    .cell-input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .cell-input[type=number] { -moz-appearance: textfield; }
+
+    /* Column widths */
+    .col-no { width: 150px; }
+    .col-unit { width: 110px; }
+    .col-tipe { width: 80px; }
+    .col-operator { width: 110px; }
+    .col-pit { width: 100px; }
+    .col-material { width: 100px; }
+    .col-stockpile { width: 100px; }
+    .col-rit { width: 70px; }
+    .col-jarak { width: 100px; }
+    .col-gross { width: 100px; }
+    .col-tare { width: 100px; }
+    .col-tonrit { width: 90px; }
+    .col-total { width: 100px; }
+    .col-catatan { width: 160px; }
+
+    /* Summary bar at bottom */
+    .grid-summary-bar {
+      display: flex;
+      gap: 16px;
+      padding: 14px 20px;
+      border-top: 2px solid var(--cream-border);
+      background: var(--cream);
+      flex-wrap: wrap;
+    }
+    .summary-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .summary-item .si-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--text-muted);
+    }
+    .summary-item .si-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--brown-dark);
+      font-family: 'DM Serif Display', serif;
+    }
+
+    /* Action buttons in grid */
+    .btn-cell {
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all .15s;
+    }
+    .btn-cell:hover {
+      background: var(--cream);
+      border-color: var(--brown-mid);
+    }
+    .btn-cell.danger:hover {
+      background: rgba(220,38,38,0.1);
+      border-color: #DC2626;
+      color: #DC2626;
+    }
+
+    /* Flow indicator */
+    .flow-indicator {
+      background: var(--cream);
+      border-radius: 10px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .flow-indicator .flow-label {
+      font-weight: 600;
+      color: var(--brown-dark);
+    }
+
+    /* Row number badge */
+    .row-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      background: var(--cream-deep);
+      font-size: 11px;
+      font-weight: 600;
+      font-family: monospace;
+      color: var(--text-secondary);
+    }
+
+    /* Validation error message */
+    .validation-msg {
+      font-size: 9px;
+      color: #DC2626;
+      margin-top: 2px;
+    }
+
+    /* Timbangan toggle per row */
+    .timbangan-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="main-wrapper">
+  <div id="topbarContainer"></div>
+  <main class="page-content">
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Rit Operation</h1>
+        <p>Daftar transaksi ritase harian · 1 baris = 1 no ritase</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="showToast('Fitur import akan segera hadir')">📥 Import Timbangan (Excel)</button>
+        <button class="btn btn-gold" onclick="openModal('ritGridModal');initGrid()">+ Tambah Rit</button>
+      </div>
+    </div>
+
+    <!-- Summary Bar -->
+    <div id="summaryBar" style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap"></div>
+
+    <!-- Table of Existing Rits -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Daftar Ritase</span>
+        <div style="font-size:12px;color:var(--text-muted)" id="ritsCount">0 record</div>
+      </div>
+      <!-- Filter Bar -->
+      <div style="display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--cream-light);align-items:end;flex-wrap:wrap">
+        <div class="form-group" style="margin-bottom:0;min-width:140px">
+          <label class="form-label" style="font-size:10px">Tanggal Awal</label>
+          <input class="form-control" type="date" id="filterTglAwal" value="2026-06-01" onchange="applyFilter()" style="font-size:12px">
+        </div>
+        <div class="form-group" style="margin-bottom:0;min-width:140px">
+          <label class="form-label" style="font-size:10px">Tanggal Akhir</label>
+          <input class="form-control" type="date" id="filterTglAkhir" value="2026-06-30" onchange="applyFilter()" style="font-size:12px">
+        </div>
+        <div class="form-group" style="margin-bottom:0;min-width:130px">
+          <label class="form-label" style="font-size:10px">Shift</label>
+          <select class="form-control" id="filterShift" onchange="applyFilter()" style="font-size:12px">
+            <option value="">Semua Shift</option>
+            <option value="Pagi">Pagi</option>
+            <option value="Malam">Malam</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;min-width:120px">
+          <label class="form-label" style="font-size:10px">Tipe</label>
+          <select class="form-control" id="filterTipe" onchange="applyFilter()" style="font-size:12px">
+            <option value="">Semua Tipe</option>
+            <option value="DT Kecil">DT Kecil</option>
+            <option value="DT Sedang">DT Sedang</option>
+            <option value="DT Besar">DT Besar</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;min-width:160px">
+          <label class="form-label" style="font-size:10px">Branch</label>
+          <select class="form-control" id="filterBranch" onchange="applyFilter()" style="font-size:12px">
+            <option value="">Semua Branch</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;min-width:120px">
+          <label class="form-label" style="font-size:10px">Unit</label>
+          <select class="form-control" id="filterUnit" onchange="applyFilter()" style="font-size:12px">
+            <option value="">Semua Unit</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="resetFilter()" style="margin-bottom:1px">✕ Reset</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>No. Rit</th>
+              <th>Tanggal / Shift</th>
+              <th>Branch</th>
+              <th>Unit</th>
+              <th>Tipe</th>
+              <th>Operator</th>
+              <th>Pit</th>
+              <th>Material</th>
+              <th>Stockpile</th>
+              <th class="text-right">Rit</th>
+              <th class="text-right">Jarak</th>
+              <th class="text-right">Gross</th>
+              <th class="text-right">Tare</th>
+              <th class="text-right">Netto</th>
+              <th class="text-right">Total (ton)</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="ritsTableBody">
+            <tr><td colspan="16" class="text-center muted" style="padding:24px">Belum ada data ritase. Klik <strong>+ Tambah Rit</strong> untuk mulai.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL: Tambah Rit — Grid dalam Popup -->
+<div class="modal-overlay" id="ritGridModal" data-no-overlay-close="true">
+  <div class="modal modal-lg" style="max-width:95vw;width:95vw;height:92vh;margin:2vh auto">
+    <div class="modal-header">
+      <span class="modal-title">Input Rit Baru</span>
+      <button class="modal-close" onclick="closeModal('ritGridModal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;height:calc(100% - 110px);overflow-y:auto">
+      <!-- Meta Section inside modal -->
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);background:var(--cream)">
+        <div class="meta-grid" style="grid-template-columns:repeat(4,1fr);gap:16px">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Branch</label>
+            <select class="form-control" id="metaBranch" onchange="updateAllRitNumbers()" style="font-size:12px">
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Tanggal <span class="req">*</span></label>
+            <input class="form-control" type="date" id="metaTanggal" value="2026-06-07" onchange="updateAllRitNumbers()" style="font-size:12px">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Shift <span class="req">*</span></label>
+            <select class="form-control" id="metaShift" onchange="regenerateAllRitNumbers()" style="font-size:12px">
+              <option selected>Shift Pagi (07:00–17:00)</option>
+              <option>Shift Malam (19:00–07:00)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid Toolbar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:white">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--text-secondary)">Data Rit per Unit</span>
+          <span id="rowCount" style="font-size:11px;color:var(--text-muted)">0 baris</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="fillDown()">⬇ Isi ke Bawah</button>
+          <button class="btn btn-ghost btn-sm" onclick="duplicateSelected()">📋 Duplikat</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteSelected()">🗑 Hapus</button>
+          <button class="btn btn-gold btn-sm" onclick="addNewRow()">+ Baris Baru</button>
+        </div>
+      </div>
+
+      <!-- Grid -->
+      <div class="grid-table-wrap">
+        <table class="grid-table">
+          <thead>
+            <tr>
+              <th style="width:30px"><input type="checkbox" class="cell-checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+              <th class="col-no">No. Rit</th>
+              <th class="col-unit">Unit DT <span class="req">*</span></th>
+              <th class="col-tipe">Tipe</th>
+              <th class="col-operator">Operator <span class="req">*</span></th>
+              <th class="col-pit">Pit <span class="req">*</span></th>
+              <th class="col-material">Material <span class="req">*</span></th>
+              <th class="col-stockpile">Stockpile <span class="req">*</span></th>
+              <th class="col-rit">Rit <span class="req">*</span></th>
+              <th class="col-jarak">Jarak (km)<br><span style="font-weight:400;font-size:9px">auto × rit</span></th>
+              <th class="col-gross">Gross (ton)</th>
+              <th class="col-tare">Tare (ton)</th>
+              <th class="col-tonrit">Ton/Rit</th>
+              <th class="col-total">Total (ton)</th>
+              <th class="col-catatan">Catatan</th>
+            </tr>
+            </tr>
+          </thead>
+          <tbody id="gridTableBody">
+            <!-- Rows dynamically generated -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Summary Bar -->
+      <div style="display:flex;gap:16px;padding:10px 16px;border-top:2px solid var(--cream-border);background:var(--cream);flex-wrap:wrap">
+        <div><span style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted)">Baris</span><div style="font-size:15px;font-weight:700;color:var(--brown-dark)" id="sumRows">0</div></div>
+        <div><span style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted)">Total Rit</span><div style="font-size:15px;font-weight:700;color:var(--brown-dark)" id="sumRit">0</div></div>
+        <div><span style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted)">Total Ton</span><div style="font-size:15px;font-weight:700;color:var(--brown-dark)" id="sumTon">0.00</div></div>
+        <div><span style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted)">Rata Ton/Rit</span><div style="font-size:15px;font-weight:700;color:var(--brown-dark)" id="sumAvgTon">0.00</div></div>
+      </div>
+
+      <!-- Modal footer with save -->
+      <div style="padding:12px 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--border)">
+        <button class="btn btn-ghost" onclick="closeModal('ritGridModal')">Batal</button>
+        <button class="btn btn-primary" onclick="saveAllRows()">💾 Simpan Semua Rit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Import Timbangan -->
+<div class="modal-overlay" id="importRitModal">
+  <div class="modal modal-md">
+    <div class="modal-header"><span class="modal-title">Import Data Timbangan — Excel Vendor (H+1)</span><button class="modal-close" onclick="closeModal('importRitModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-info">📅 Sistem matching berdasarkan No. Rit. Data yang di-import akan update field Gross, Tare, dan Netto.</div>
+      <div class="form-row col-2">
+        <div class="form-group">
+          <label class="form-label">Branch</label>
+          <select class="form-control" id="importBranch"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tanggal / Shift</label>
+          <select class="form-control"><option>Shift Pagi — 07 Jun 2026 (3 record pending)</option></select>
+        </div>
+      </div>
+      <div class="upload-zone" onclick="showToast('File dipilih: timbangan_07jun.xlsx')">
+        <div class="upload-zone-icon">📊</div>
+        <p><strong>Klik untuk pilih file Excel</strong> dari vendor timbangan</p>
+        <p style="font-size:11px;margin-top:4px;color:var(--text-muted)">.xlsx · .xls · Maks. 10MB</p>
+      </div>
+      <div class="divider"></div>
+      <div id="mappingArea"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('importRitModal')">Batal</button>
+      <button class="btn btn-primary" onclick="closeModal('importRitModal');showToast('Import berhasil: 3 record diupdate')">Proses Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Confirm Delete -->
+<div class="modal-overlay" id="confirmDeleteModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">Konfirmasi Hapus</span>
+      <button class="modal-close" onclick="closeModal('confirmDeleteModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warn">⚠️ Anda akan menghapus <strong id="deleteCount">0</strong> baris data. Tindakan ini tidak dapat dibatalkan.</div>
+      <p style="font-size:12px;color:var(--text-secondary)">Pastikan data yang akan dihapus sudah benar.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('confirmDeleteModal')">Batal</button>
+      <button class="btn btn-danger" onclick="confirmDeleteAction()">Hapus</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+document.getElementById('sidebarContainer').innerHTML = renderSidebar('rit_operation');
+document.getElementById('topbarContainer').innerHTML = renderTopbar('Rit Operation');
+
+// ─── Data Master ───────────────────────────────────────────────────
+const MASTER = {
+  units: [
+    { code: 'DT-001', type: 'DT Kecil', capacity: 20 },
+    { code: 'DT-002', type: 'DT Kecil', capacity: 20 },
+    { code: 'DT-003', type: 'DT Kecil', capacity: 20 },
+    { code: 'DT-004', type: 'DT Besar', capacity: 40 },
+    { code: 'DT-005', type: 'DT Kecil', capacity: 20 },
+    { code: 'DT-006', type: 'DT Kecil', capacity: 20 },
+  ],
+  operators: ['Budi S.', 'Agus P.', 'Hendra K.', 'Yusuf A.', 'Slamet D.', 'Rudi W.'],
+  pits: ['Pit A1', 'Pit A2', 'Pit A3', 'Pit B1'],
+  materials: ['Nikel OB', 'Nikel ORE'],
+  stockpiles: ['ROM 1', 'ROM 2', 'Disposal A'],
+  shifts: ['Shift Pagi (07:00–17:00)', 'Shift Malam (19:00–07:00)']
+};
+
+// ─── Branch Config ─────────────────────────────────────────────────
+const BRANCHES = [
+  { name: 'Project CLM Luwu Raya', code: 'CLM' },
+  { name: 'Project NPM Konawe', code: 'NPM' },
+  { name: 'Project PPS Sultra', code: 'PPS' },
+];
+function getBranchCode(branchName) {
+  const b = BRANCHES.find(x => x.name === branchName);
+  return b ? b.code : 'NPM';
+}
+function getSelectedBranch() {
+  const el = document.getElementById('metaBranch');
+  return el ? el.value : 'Project NPM Konawe';
+}
+function currentBranchCode() {
+  return getBranchCode(getSelectedBranch());
+}
+
+// ─── Grid State ────────────────────────────────────────────────────
+let gridData = [];
+let rowCounter = 0;
+let ritSequence = 31; // Starting sequence for auto-generate
+
+// ─── Active shift units (from Shift Management) ────────────────────
+const SHIFT_ACTIVE_UNITS = [
+  { unit:'DT-001', operator:'Budi S.', pit:'Pit A1', material:'Nikel ORE', stockpile:'ROM 1' },
+  { unit:'DT-002', operator:'Agus P.', pit:'Pit A2', material:'Nikel ORE', stockpile:'ROM 2' },
+  { unit:'DT-003', operator:'Hendra K.', pit:'Pit A3', material:'Nikel ORE', stockpile:'ROM 1' },
+  { unit:'DT-004', operator:'Rudi W.', pit:'Pit A1', material:'Nikel OB', stockpile:'Disposal A' },
+  { unit:'DT-005', operator:'Slamet D.', pit:'Pit B1', material:'Nikel OB', stockpile:'Disposal A' },
+  { unit:'DT-006', operator:'Yusuf A.', pit:'Pit A2', material:'Nikel ORE', stockpile:'ROM 2' },
+  { unit:'DT-007', operator:'Bambang R.', pit:'Pit A3', material:'Nikel OB', stockpile:'Disposal A' },
+  { unit:'DT-008', operator:'Dedi S.', pit:'Pit B1', material:'Nikel ORE', stockpile:'ROM 1' },
+  { unit:'DT-009', operator:'Ahmad F.', pit:'Pit A1', material:'Nikel ORE', stockpile:'ROM 2' },
+  { unit:'DT-010', operator:'Eko P.', pit:'Pit A2', material:'Nikel OB', stockpile:'Disposal A' },
+];
+
+// ─── Initialize — pre-populate from Shift ──────────────────────────
+function initGrid() {
+  gridData = [];
+  rowCounter = 0;
+  ritSequence = Math.max(ritSequence, 31);
+  SHIFT_ACTIVE_UNITS.forEach(u => {
+    addRow({ unit: u.unit, operator: u.operator, pit: u.pit, material: u.material, stockpile: u.stockpile, rit: 1 });
+  });
+  renderGrid();
+  updateSummary();
+  updateSummaryBar();
+}
+
+// ─── Add Row ───────────────────────────────────────────────────────
+function addRow(data = {}) {
+  rowCounter++;
+  const tanggal = document.getElementById('metaTanggal').value;
+  const formattedDate = formatDateForRit(tanggal);
+  ritSequence++;
+
+  const row = {
+    id: rowCounter,
+    noRit: `RIT-${currentBranchCode()}-${formattedDate}-${String(ritSequence).padStart(4, '0')}`,
+    unit: data.unit || '',
+    tipe: data.unit ? getUnitType(data.unit) : '',
+    operator: data.operator || '',
+    pit: data.pit || '',
+    material: data.material || '',
+    stockpile: data.stockpile || '',
+    rit: data.rit != null ? data.rit : 1,
+    jarak: data.jarak || 0,
+    jamIn: data.jamIn || '',
+    gross: data.gross || 0,
+    jamOut: data.jamOut || '',
+    tare: data.tare || 0,
+    tonRit: data.tonRit || 0,
+    totalTon: data.totalTon || 0,
+    catatan: data.catatan || '',
+    selected: false,
+    hasTimbangan: true
+  };
+
+  // Auto-calculate ton/rit if gross and tare provided
+  if (row.gross > 0 && row.tare >= 0 && row.gross > row.tare) {
+    row.tonRit = row.gross - row.tare;
+  } else if (row.unit) {
+    const unitData = MASTER.units.find(u => u.code === row.unit);
+    if (unitData) row.tonRit = unitData.capacity;
+  }
+  row.totalTon = row.tonRit * row.rit;
+
+  gridData.push(row);
+  return row;
+}
+
+function addNewRow() {
+  addRow();
+  renderGrid();
+  updateSummary();
+}
+
+// ─── Render Grid ───────────────────────────────────────────────────
+function renderGrid() {
+  const tbody = document.getElementById('gridTableBody');
+  tbody.innerHTML = gridData.map((row, index) => renderRow(row, index)).join('');
+  document.getElementById('rowCount').textContent = `${gridData.length} baris`;
+}
+
+function renderRow(row, index) {
+  const unitOptions = MASTER.units.map(u =>
+    `<option value="${u.code}" ${row.unit === u.code ? 'selected' : ''}>${u.code}</option>`
+  ).join('');
+
+  const operatorOptions = MASTER.operators.map(o =>
+    `<option value="${o}" ${row.operator === o ? 'selected' : ''}>${o}</option>`
+  ).join('');
+
+  const pitOptions = MASTER.pits.map(p =>
+    `<option value="${p}" ${row.pit === p ? 'selected' : ''}>${p}</option>`
+  ).join('');
+
+  const materialOptions = MASTER.materials.map(m =>
+    `<option value="${m}" ${row.material === m ? 'selected' : ''}>${m}</option>`
+  ).join('');
+
+  const stockpileOptions = MASTER.stockpiles.map(s =>
+    `<option value="${s}" ${row.stockpile === s ? 'selected' : ''}>${s}</option>`
+  ).join('');
+
+  const isError = !row.unit || !row.operator || !row.pit || !row.material || !row.stockpile || row.rit <= 0;
+
+  const autoCls = v => v ? 'cell-auto' : '';
+  return `
+    <tr class="${isError ? 'validation-error' : ''}" data-id="${row.id}">
+      <td style="text-align:center">
+        <input type="checkbox" class="cell-checkbox" ${row.selected ? 'checked' : ''} onchange="toggleRowSelect(${row.id})">
+      </td>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:1px">
+          <input class="cell-input" type="text" value="${row.noRit}" disabled style="font-family:monospace;font-size:11px">
+          <span style="font-size:9px;color:var(--text-muted)">Seq: ${ritSequence - gridData.length + index + 1}</span>
+        </div>
+      </td>
+      <td>
+        <select class="cell-select ${autoCls(row.unit)}" onchange="onUnitChange(${row.id}, this.value)">
+          <option value="">-- Pilih --</option>
+          ${unitOptions}
+        </select>
+      </td>
+      <td>
+        <input class="cell-input computed" type="text" value="${row.tipe || '—'}" disabled>
+      </td>
+      <td>
+        <select class="cell-select ${!row.operator ? 'error' : ''} ${autoCls(row.operator)}" onchange="onFieldChange(${row.id}, 'operator', this.value)">
+          <option value="">-- Pilih --</option>
+          ${operatorOptions}
+        </select>
+      </td>
+      <td>
+        <select class="cell-select ${!row.pit ? 'error' : ''} ${autoCls(row.pit)}" onchange="onFieldChange(${row.id}, 'pit', this.value)">
+          <option value="">-- Pilih --</option>
+          ${pitOptions}
+        </select>
+      </td>
+      <td>
+        <select class="cell-select ${!row.material ? 'error' : ''} ${autoCls(row.material)}" onchange="onFieldChange(${row.id}, 'material', this.value)">
+          <option value="">-- Pilih --</option>
+          ${materialOptions}
+        </select>
+      </td>
+      <td>
+        <select class="cell-select ${!row.stockpile ? 'error' : ''} ${autoCls(row.stockpile)}" onchange="onFieldChange(${row.id}, 'stockpile', this.value)">
+          <option value="">-- Pilih --</option>
+          ${stockpileOptions}
+        </select>
+      </td>
+      <td>
+        <input class="cell-input ${row.rit <= 0 ? 'error' : ''}" type="number" value="${row.rit}"
+          onchange="onFieldChange(${row.id}, 'rit', parseFloat(this.value) || 0)"
+          oninput="onNumInput(${row.id}, 'rit', this)">
+      </td>
+      <td>
+        <input class="cell-input cell-auto" type="text" value="${row.jarak > 0 ? row.jarak.toFixed(1) : '—'}" disabled>
+      </td>
+      <td>
+        <input class="cell-input" type="number" step="0.001" min="0" value="${row.gross || ''}"
+          onchange="onFieldChange(${row.id}, 'gross', parseFloat(this.value) || 0)"
+          oninput="onNumInput(${row.id}, 'gross', this)" placeholder="0.000">
+      </td>
+      <td>
+        <input class="cell-input" type="number" step="0.001" min="0" value="${row.tare || ''}"
+          onchange="onFieldChange(${row.id}, 'tare', parseFloat(this.value) || 0)"
+          oninput="onNumInput(${row.id}, 'tare', this)" placeholder="0.000">
+      </td>
+      <td>
+        <input class="cell-input computed" type="text" value="${row.tonRit > 0 ? row.tonRit.toFixed(2) : '—'}" disabled>
+      </td>
+      <td>
+        <input class="cell-input computed" type="text" value="${row.totalTon > 0 ? row.totalTon.toFixed(2) : '—'}" disabled
+          style="color:var(--amber);font-weight:700">
+      </td>
+      <td>
+        <input class="cell-input" type="text" value="${row.catatan || ''}"
+          onchange="onFieldChange(${row.id}, 'catatan', this.value)" placeholder="...">
+      </td>
+    </tr>
+  `;
+}
+
+// ─── Event Handlers ────────────────────────────────────────────────
+function onUnitChange(rowId, value) {
+  const row = gridData.find(r => r.id === rowId);
+  if (row) {
+    row.unit = value;
+    row.tipe = getUnitType(value);
+    // Auto-fill ton/rit from unit capacity if no timbangan data
+    if (value && row.gross === 0 && row.tare === 0) {
+      const unitData = MASTER.units.find(u => u.code === value);
+      if (unitData) {
+        row.tonRit = unitData.capacity;
+        row.totalTon = row.tonRit * row.rit;
+      }
+    }
+    renderGrid();
+    updateSummary();
+  }
+}
+
+function onFieldChange(rowId, field, value) {
+  const row = gridData.find(r => r.id === rowId);
+  if (row) {
+    row[field] = value;
+    if (field === 'pit' || field === 'rit') recalcRow(rowId);
+    renderGrid();
+    updateSummary();
+  }
+}
+
+// Pit → distance budget (km/trip) from Master Data
+const PIT_DISTANCE = { 'Pit A1': 9.8, 'Pit A2': 10.2, 'Pit A3': 12.5, 'Pit B1': 15.0 };
+
+// Live input: update data model without full re-render (keeps focus)
+function onNumInput(rowId, field, el) {
+  const row = gridData.find(r => r.id === rowId);
+  if (!row) return;
+  row[field] = parseFloat(el.value) || 0;
+  recalcRowLive(rowId);
+}
+
+function recalcRowLive(rowId) {
+  const row = gridData.find(r => r.id === rowId);
+  if (!row) return;
+  // Auto-calc jarak from pit distance × rit
+  row.jarak = (row.pit && PIT_DISTANCE[row.pit] && row.rit > 0) ? PIT_DISTANCE[row.pit] * row.rit : 0;
+  // Calculate ton/rit from gross and tare (both in tons)
+  if (row.gross > 0 && row.tare >= 0 && row.gross > row.tare) {
+    row.tonRit = row.gross - row.tare;
+  } else if (row.unit && row.gross === 0 && row.tare === 0) {
+    const unitData = MASTER.units.find(u => u.code === row.unit);
+    if (unitData) row.tonRit = unitData.capacity;
+  } else {
+    row.tonRit = 0;
+  }
+  row.totalTon = row.tonRit * row.rit;
+  // Live DOM patch — find tr via data-id, update computed cells
+  const tr = document.querySelector(`tr[data-id="${rowId}"]`);
+  if (tr) {
+    const inputs = tr.querySelectorAll('input');
+    inputs[4].value = row.jarak > 0 ? row.jarak.toFixed(1) : '—'; // jarak
+    inputs[7].value = row.tonRit > 0 ? row.tonRit.toFixed(2) : '—'; // tonRit
+    inputs[8].value = row.totalTon > 0 ? row.totalTon.toFixed(2) : '—'; // total
+  }
+  updateSummary();
+}
+
+function recalcRow(rowId) {
+  recalcRowLive(rowId);
+  renderGrid();
+}
+
+// ─── Selection ─────────────────────────────────────────────────────
+function toggleRowSelect(rowId) {
+  const row = gridData.find(r => r.id === rowId);
+  if (row) {
+    row.selected = !row.selected;
+    renderGrid();
+  }
+}
+
+function toggleSelectAll() {
+  const selectAll = document.getElementById('selectAll');
+  gridData.forEach(row => row.selected = selectAll.checked);
+  renderGrid();
+}
+
+// ─── Actions ───────────────────────────────────────────────────────
+function duplicateRow(rowId) {
+  const sourceRow = gridData.find(r => r.id === rowId);
+  if (sourceRow) {
+    addRow({
+      unit: sourceRow.unit,
+      operator: sourceRow.operator,
+      pit: sourceRow.pit,
+      material: sourceRow.material,
+      stockpile: sourceRow.stockpile,
+      rit: sourceRow.rit,
+      jarak: sourceRow.jarak,
+      jamIn: sourceRow.jamIn,
+      gross: sourceRow.gross,
+      jamOut: sourceRow.jamOut,
+      tare: sourceRow.tare,
+      tonRit: sourceRow.tonRit,
+      totalTon: sourceRow.totalTon,
+      catatan: sourceRow.catatan
+    });
+    renderGrid();
+    updateSummary();
+    showToast('Baris diduplikat');
+  }
+}
+
+function duplicateSelected() {
+  const selected = gridData.filter(r => r.selected);
+  if (selected.length === 0) {
+    showToast('Pilih baris untuk diduplikat', 'warn');
+    return;
+  }
+  selected.forEach(row => {
+    addRow({
+      unit: row.unit,
+      operator: row.operator,
+      pit: row.pit,
+      material: row.material,
+      stockpile: row.stockpile,
+      rit: row.rit,
+      jarak: row.jarak,
+      jamIn: row.jamIn,
+      gross: row.gross,
+      jamOut: row.jamOut,
+      tare: row.tare,
+      tonRit: row.tonRit,
+      totalTon: row.totalTon,
+      catatan: row.catatan
+    });
+  });
+  renderGrid();
+  updateSummary();
+  showToast(`${selected.length} baris diduplikat`);
+}
+
+function deleteRow(rowId) {
+  gridData = gridData.filter(r => r.id !== rowId);
+  renderGrid();
+  updateSummary();
+  showToast('Baris dihapus');
+}
+
+let pendingDeleteCount = 0;
+function deleteSelected() {
+  const selected = gridData.filter(r => r.selected);
+  if (selected.length === 0) {
+    showToast('Pilih baris untuk dihapus', 'warn');
+    return;
+  }
+  pendingDeleteCount = selected.length;
+  document.getElementById('deleteCount').textContent = pendingDeleteCount;
+  openModal('confirmDeleteModal');
+}
+
+function confirmDeleteAction() {
+  gridData = gridData.filter(r => !r.selected);
+  closeModal('confirmDeleteModal');
+  renderGrid();
+  updateSummary();
+  showToast(`${pendingDeleteCount} baris dihapus`);
+}
+
+function fillDown() {
+  if (gridData.length < 2) {
+    showToast('Butuh minimal 2 baris untuk isi ke bawah', 'warn');
+    return;
+  }
+  const firstRow = gridData[0];
+  // Fill down: pit, material, stockpile from first row to empty rows
+  for (let i = 1; i < gridData.length; i++) {
+    if (!gridData[i].pit) { gridData[i].pit = firstRow.pit; recalcRow(gridData[i].id); }
+    if (!gridData[i].material) gridData[i].material = firstRow.material;
+    if (!gridData[i].stockpile) gridData[i].stockpile = firstRow.stockpile;
+  }
+  renderGrid();
+  showToast('Nilai kolom diisi ke bawah');
+}
+
+let savedRits = [
+  { noRit:'RIT-NPM-260601-0001', tgl:'2026-06-01', shift:'Pagi (07:00–17:00)', branch:'Project NPM Konawe',
+    unit:'DT-001', tipe:'DT Kecil', operator:'Budi S.', pit:'Pit A1', material:'Nikel ORE', stockpile:'ROM 1',
+    rit:7, jarak:68.6, gross:25.350, tare:5.120, totalTon:141.61 },
+  { noRit:'RIT-CLM-260602-0002', tgl:'2026-06-02', shift:'Pagi (07:00–17:00)', branch:'Project CLM Luwu Raya',
+    unit:'DT-003', tipe:'DT Sedang', operator:'Hendra K.', pit:'Pit A3', material:'Nikel ORE', stockpile:'ROM 1',
+    rit:9, jarak:112.5, gross:38.200, tare:7.800, totalTon:273.60 },
+  { noRit:'RIT-PPS-260603-0003', tgl:'2026-06-03', shift:'Malam (19:00–07:00)', branch:'Project PPS Sultra',
+    unit:'DT-005', tipe:'DT Besar', operator:'Slamet D.', pit:'Pit B1', material:'Nikel OB', stockpile:'Disposal A',
+    rit:5, jarak:75.0, gross:42.500, tare:9.200, totalTon:166.50 },
+  { noRit:'RIT-NPM-260604-0004', tgl:'2026-06-04', shift:'Pagi (07:00–17:00)', branch:'Project NPM Konawe',
+    unit:'DT-008', tipe:'DT Sedang', operator:'Dedi S.', pit:'Pit B1', material:'Nikel ORE', stockpile:'ROM 1',
+    rit:8, jarak:120.0, gross:36.800, tare:7.100, totalTon:237.60 },
+  { noRit:'RIT-CLM-260606-0005', tgl:'2026-06-06', shift:'Malam (19:00–07:00)', branch:'Project CLM Luwu Raya',
+    unit:'DT-010', tipe:'DT Kecil', operator:'Eko P.', pit:'Pit A2', material:'Nikel OB', stockpile:'Disposal A',
+    rit:6, jarak:61.2, gross:22.100, tare:4.800, totalTon:103.80 },
+];
+
+function saveAllRows() {
+  const errors = gridData.filter(r => !r.unit || !r.operator || !r.pit || !r.material || !r.stockpile || r.rit <= 0);
+  if (errors.length > 0) {
+    showToast(`${errors.length} baris memiliki validasi error`, 'warn');
+    renderGrid();
+    return;
+  }
+  const tanggal = document.getElementById('metaTanggal').value;
+  const shift = document.getElementById('metaShift').value;
+  const branch = getSelectedBranch();
+  gridData.forEach((row, i) => {
+    const seq = ritSequence - gridData.length + i + 1;
+    savedRits.push({
+      noRit: row.noRit || `RIT-${currentBranchCode()}-${formatDateForRit(tanggal)}-${String(seq).padStart(4, '0')}`,
+      tgl: tanggal,
+      shift: shift,
+      branch: branch,
+      unit: row.unit,
+      tipe: row.tipe || getUnitType(row.unit),
+      operator: row.operator,
+      pit: row.pit,
+      material: row.material,
+      stockpile: row.stockpile,
+      rit: row.rit,
+      jarak: row.jarak || 0,
+      gross: row.gross || 0,
+      tare: row.tare || 0,
+      totalTon: row.totalTon || 0
+    });
+  });
+  closeModal('ritGridModal');
+  renderRitsTable();
+  showToast(`${gridData.length} baris ritase berhasil disimpan`);
+}
+
+function getFilterValues() {
+  return {
+    tglAwal: document.getElementById('filterTglAwal').value,
+    tglAkhir: document.getElementById('filterTglAkhir').value,
+    shift: document.getElementById('filterShift').value,
+    tipe: document.getElementById('filterTipe').value,
+    branch: document.getElementById('filterBranch').value,
+    unit: document.getElementById('filterUnit').value,
+  };
+}
+
+function matchesFilter(r, f) {
+  if (f.tglAwal && r.tgl < f.tglAwal) return false;
+  if (f.tglAkhir && r.tgl > f.tglAkhir) return false;
+  if (f.shift && !r.shift.includes(f.shift)) return false;
+  if (f.tipe && r.tipe !== f.tipe) return false;
+  if (f.branch && r.branch !== f.branch) return false;
+  if (f.unit && r.unit !== f.unit) return false;
+  return true;
+}
+
+function applyFilter() {
+  renderRitsTable();
+}
+
+function resetFilter() {
+  document.getElementById('filterTglAwal').value = '2026-06-01';
+  document.getElementById('filterTglAkhir').value = '2026-06-30';
+  document.getElementById('filterShift').value = '';
+  document.getElementById('filterTipe').value = '';
+  document.getElementById('filterBranch').value = '';
+  document.getElementById('filterUnit').value = '';
+  renderRitsTable();
+}
+
+function renderRitsTable() {
+  const tbody = document.getElementById('ritsTableBody');
+  const f = getFilterValues();
+  const filtered = savedRits.filter(r => matchesFilter(r, f));
+  document.getElementById('ritsCount').textContent = filtered.length + ' record';
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="16" class="text-center muted" style="padding:24px">Tidak ada data ritase yang cocok dengan filter.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map((r, i) =>
+    '<tr>' +
+    '<td><strong>' + r.noRit + '</strong></td>' +
+    '<td>' + r.tgl + ' · ' + r.shift.replace(' (07:00–17:00)','').replace(' (19:00–07:00)','') + '</td>' +
+    '<td>' + r.branch + '</td>' +
+    '<td>' + r.unit + '</td>' +
+    '<td>' + r.tipe + '</td>' +
+    '<td>' + r.operator + '</td>' +
+    '<td>' + r.pit + '</td>' +
+    '<td>' + r.material + '</td>' +
+    '<td>' + r.stockpile + '</td>' +
+    '<td class="text-right">' + r.rit + '</td>' +
+    '<td class="text-right">' + (r.jarak || '-') + '</td>' +
+    '<td class="text-right">' + (r.gross ? Number(r.gross).toLocaleString() : '-') + '</td>' +
+    '<td class="text-right">' + (r.tare ? Number(r.tare).toLocaleString() : '-') + '</td>' +
+    '<td class="text-right">' + (r.gross && r.tare ? Number(r.gross - r.tare).toLocaleString() : '-') + '</td>' +
+    '<td class="text-right">' + r.totalTon.toFixed(2) + '</td>' +
+    '<td><button class="btn btn-ghost btn-sm" onclick="showToast(\'Edit rit ' + r.noRit + ' (akan dibuka di popup)\')">✎</button></td>' +
+    '</tr>'
+  ).join('');
+}
+
+// ─── Summary ───────────────────────────────────────────────────────
+function updateSummary() {
+  const totalRows = gridData.length;
+  const totalRit = gridData.reduce((sum, r) => sum + (r.rit || 0), 0);
+  const totalTon = gridData.reduce((sum, r) => sum + (r.totalTon || 0), 0);
+  const avgTon = totalRit > 0 ? totalTon / totalRit : 0;
+  const totalJarak = gridData.reduce((sum, r) => sum + (r.jarak || 0), 0);
+
+  document.getElementById('sumRows').textContent = totalRows;
+  document.getElementById('sumRit').textContent = totalRit;
+  document.getElementById('sumTon').textContent = totalTon.toFixed(2);
+  document.getElementById('sumAvgTon').textContent = avgTon.toFixed(2);
+  document.getElementById('sumJarak').textContent = totalJarak.toFixed(1);
+}
+
+function updateSummaryBar() {
+  const summaryItems = [
+    { l: 'Total Record', v: '31', sub: 'baris data' },
+    { l: 'Total Rit', v: '247', sub: 'trip' },
+    { l: 'Total Tonase', v: '4.832', sub: 'ton' },
+    { l: 'Manual', v: '24', sub: 'timbangan manual' },
+    { l: 'Pending Vendor', v: '3', sub: 'menunggu H+1' },
+    { l: 'Imported', v: '2', sub: 'dari vendor' },
+    { l: 'Estimasi', v: '2', sub: 'tanpa timbangan' },
+  ];
+  document.getElementById('summaryBar').innerHTML = summaryItems.map(s =>
+    '<div class="summary-pill">' +
+    '<div class="sp-label">' + s.l + '</div>' +
+    '<div class="sp-val">' + s.v + '</div>' +
+    '<div class="sp-sub">' + s.sub + '</div>' +
+    '</div>'
+  ).join('');
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────
+function getUnitType(unitCode) {
+  const unit = MASTER.units.find(u => u.code === unitCode);
+  return unit ? unit.type : '';
+}
+
+function getUnitCapacity(unitCode) {
+  const unit = MASTER.units.find(u => u.code === unitCode);
+  return unit ? unit.capacity : 0;
+}
+
+function formatDateForRit(dateStr) {
+  if (!dateStr) return '260607';
+  const d = new Date(dateStr);
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${yy}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function updateAllRitNumbers() {
+  const tanggal = document.getElementById('metaTanggal').value;
+  const formattedDate = formatDateForRit(tanggal);
+  gridData.forEach((row, i) => {
+    row.noRit = `RIT-${currentBranchCode()}-${formattedDate}-${String(ritSequence - gridData.length + i + 1).padStart(4, '0')}`;
+  });
+  renderGrid();
+}
+
+function regenerateAllRitNumbers() {
+  updateAllRitNumbers();
+}
+
+// ─── Guard: intercept overlay click → toast instead of close ─────
+document.addEventListener('click', function ritGuard(e) {
+  const overlay = document.getElementById('ritGridModal');
+  if (overlay && overlay.classList.contains('show') && e.target === overlay) {
+    showToast('Gunakan tombol "Simpan Semua Rit" atau "Batal" untuk keluar', 'warn');
+  }
+});
+
+// ─── Init ──────────────────────────────────────────────────────────
+function initRitPage() {
+  // Populate branch selects
+  const branchSelectors = ['metaBranch', 'filterBranch', 'importBranch'];
+  branchSelectors.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    BRANCHES.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.name; opt.textContent = b.name;
+      sel.appendChild(opt);
+    });
+  });
+  // Default to first branch
+  const metaBranch = document.getElementById('metaBranch');
+  if (metaBranch) metaBranch.value = BRANCHES[1].name; // NPM Konawe
+  // Populate unit filter from SHIFT_ACTIVE_UNITS
+  const unitSel = document.getElementById('filterUnit');
+  const seen = {};
+  SHIFT_ACTIVE_UNITS.forEach(u => {
+    if (!seen[u.unit]) { seen[u.unit] = true;
+      const opt = document.createElement('option');
+      opt.value = u.unit; opt.textContent = u.unit;
+      unitSel.appendChild(opt);
+    }
+  });
+  renderRitsTable();
+}
+initRitPage();
+</script>
+</body>
+</html>

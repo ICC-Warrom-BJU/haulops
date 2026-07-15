@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Surat Jalan — Hauling Monitor</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="main-wrapper">
+  <div id="topbarContainer"></div>
+  <main class="page-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Surat Jalan</h1>
+        <p>Pencatatan ritase per trip · Shift Pagi 07 Jun · <strong>31 SJ</strong> ter-input</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="openModal('importTimbanganModal')">📥 Import Timbangan (Excel)</button>
+        <button class="btn btn-gold" onclick="openModal('inputSJModal')">+ Input Surat Jalan</button>
+      </div>
+    </div>
+
+    <!-- Summary pills -->
+    <div id="summaryBar" style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap"></div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="search-box">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input placeholder="Cari No. SJ, Unit...">
+        </div>
+        <select class="filter-select"><option>Semua Unit</option><option>DT-001</option><option>DT-002</option></select>
+        <select class="filter-select"><option>Semua Status Timbangan</option><option>Manual</option><option>Pending Vendor</option><option>Imported</option><option>Mismatch</option></select>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="showToast('Laporan SJ diekspor')">⬇ Export Excel</button>
+    </div>
+
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>No SJ</th><th>Unit</th><th>Operator</th><th>Pit → Stockpile</th><th>Material</th><th>Berangkat</th><th>Gross</th><th>Tare</th><th>Netto</th><th>Revenue</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="sjTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL: Input SJ -->
+<div class="modal-overlay" id="inputSJModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span class="modal-title">Input Surat Jalan</span>
+      <button class="modal-close" onclick="closeModal('inputSJModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--cream);border-radius:10px;padding:14px 20px;margin-bottom:20px">
+        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Flow Ritase — WITH TIMBANGAN</div>
+        <div class="step-flow">
+          <div class="step"><div class="step-dot active">1</div><div class="step-label">Pit / Muat</div></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-dot pending">2</div><div class="step-label">Timbang IN</div></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-dot pending">3</div><div class="step-label">Stockpile</div></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-dot pending">4</div><div class="step-label">Timbang OUT</div></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-dot pending">✓</div><div class="step-label">Selesai</div></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Informasi Dasar</div>
+        <div class="form-row col-3">
+          <div class="form-group"><label class="form-label">No. Surat Jalan <span class="req">*</span></label><input class="form-control" placeholder="SJ-0032"></div>
+          <div class="form-group"><label class="form-label">Unit DT <span class="req">*</span></label><select class="form-control"><option>-- Pilih Unit --</option><option>DT-001</option><option>DT-002</option><option>DT-003</option></select></div>
+          <div class="form-group"><label class="form-label">Operator <span class="req">*</span></label><select class="form-control"><option>Budi S. (auto)</option></select></div>
+        </div>
+        <div class="form-row col-3">
+          <div class="form-group"><label class="form-label">Pit (Loading Point) <span class="req">*</span></label><select class="form-control"><option>-- Pilih Pit --</option><option>Pit A1</option><option>Pit A2</option><option>Pit B1</option></select></div>
+          <div class="form-group"><label class="form-label">Material <span class="req">*</span></label><select class="form-control"><option>-- Pilih Material --</option><option>Coal</option><option>Overburden (OB)</option></select></div>
+          <div class="form-group"><label class="form-label">Stockpile (Dumping Point) <span class="req">*</span></label><select class="form-control"><option>-- Pilih Stockpile --</option><option>ROM 1</option><option>ROM 2</option><option>ROM 3</option></select></div>
+        </div>
+        <div class="form-row col-2">
+          <div class="form-group"><label class="form-label">Jam Berangkat dari Pit <span class="req">*</span></label><input class="form-control" type="time"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="form-section-title" style="margin:0">Data Timbangan</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)">
+            <input type="checkbox" id="timbanganAda" checked style="accent-color:var(--brown-dark)">
+            <label for="timbanganAda">Data timbangan tersedia di SJ fisik</label>
+          </div>
+        </div>
+        <div id="timbanganFields">
+          <div class="form-row col-2">
+            <div class="form-group"><label class="form-label">Jam Timbang IN</label><input class="form-control" type="time"></div>
+            <div class="form-group"><label class="form-label">Berat Gross (kg) <span class="req">*</span></label><input class="form-control" type="number" placeholder="38000"></div>
+          </div>
+          <div class="form-row col-2">
+            <div class="form-group"><label class="form-label">Jam Timbang OUT</label><input class="form-control" type="time"></div>
+            <div class="form-group"><label class="form-label">Berat Tare (kg) <span class="req">*</span></label><input class="form-control" type="number" placeholder="19000"></div>
+          </div>
+        </div>
+        <div style="background:var(--cream-deep);border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border)">
+          <span style="font-size:13px;font-weight:500;color:var(--text-secondary)">Netto (Auto-hitung)</span>
+          <span id="nettoDisplay" style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--brown-dark)">— ton</span>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Catatan</label><textarea class="form-control" rows="2" placeholder="Catatan tambahan (opsional)"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('inputSJModal')">Batal</button>
+      <button class="btn btn-primary" onclick="closeModal('inputSJModal');showToast('SJ-0032 berhasil disimpan')">Simpan Surat Jalan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Import Timbangan -->
+<div class="modal-overlay" id="importTimbanganModal">
+  <div class="modal modal-md">
+    <div class="modal-header"><span class="modal-title">Import Data Timbangan — Excel Vendor</span><button class="modal-close" onclick="closeModal('importTimbanganModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-info">📅 Import H+1 dari vendor. Sistem matching berdasarkan No. SJ.</div>
+      <div class="form-group"><label class="form-label">Shift / Tanggal</label><select class="form-control"><option>Shift Pagi — 07 Jun 2026 (3 SJ pending)</option></select></div>
+      <div class="upload-zone" onclick="showToast('File dipilih: timbangan_07jun.xlsx')">
+        <div class="upload-zone-icon">📊</div>
+        <p><strong>Klik untuk pilih file Excel</strong> atau drag & drop</p>
+        <p style="font-size:11px;margin-top:4px;color:var(--text-muted)">.xlsx · .xls · Maks. 10MB</p>
+      </div>
+      <div class="divider"></div>
+      <div id="mappingCols"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('importTimbanganModal')">Batal</button>
+      <button class="btn btn-primary" onclick="closeModal('importTimbanganModal');showToast('Import berhasil: 3 SJ diupdate')">Proses Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Edit SJ (Edit Request) -->
+<div class="modal-overlay" id="editSJModal">
+  <div class="modal modal-sm">
+    <div class="modal-header"><span class="modal-title">Edit Surat Jalan · SJ-0027</span><button class="modal-close" onclick="closeModal('editSJModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-warn">Data shift sudah <strong>Approved</strong>. Perubahan memerlukan Edit Request ke Supervisor.</div>
+      <div class="form-group"><label class="form-label">Field yang Ingin Diubah</label><select class="form-control"><option>Berat Gross</option><option>Berat Tare</option><option>Jam Berangkat</option></select></div>
+      <div class="form-row col-2">
+        <div class="form-group"><label class="form-label">Nilai Lama</label><input class="form-control" value="37.5 ton" disabled></div>
+        <div class="form-group"><label class="form-label">Nilai Baru</label><input class="form-control" placeholder="Masukkan nilai baru"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Alasan Edit <span class="req">*</span></label><textarea class="form-control" rows="2" placeholder="Jelaskan alasan perubahan data..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('editSJModal')">Batal</button>
+      <button class="btn btn-primary" onclick="closeModal('editSJModal');showToast('Edit request dikirim ke Supervisor')">Kirim Edit Request</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+document.getElementById('sidebarContainer').innerHTML = renderSidebar('surat_jalan');
+document.getElementById('topbarContainer').innerHTML = renderTopbar('Surat Jalan');
+
+// Summary bar
+const summaryItems = [
+  {l:'Total SJ',v:'31'},{l:'Manual',v:'24'},{l:'Pending Vendor',v:'3'},
+  {l:'Imported',v:'2'},{l:'Mismatch',v:'2'},
+];
+document.getElementById('summaryBar').innerHTML = summaryItems.map(s =>
+  '<div style="background:white;border:1px solid var(--border);border-radius:8px;padding:10px 16px">' +
+  '<div style="font-size:10px;color:var(--text-muted);text-transform:uppercase">' + s.l + '</div>' +
+  '<div style="font-size:20px;font-weight:700">' + s.v + '</div>' +
+  '</div>'
+).join('');
+
+// SJ data
+const sjData = [
+  {sj:'SJ-0031',u:'DT-006',op:'Yusuf A.',pit:'Pit A3',stk:'ROM 1',mat:'Coal',jam:'11:42',gross:'38.4 t',tare:'19.2 t',netto:'19.2 t',rev:'Rp 864.000',st:'manual'},
+  {sj:'SJ-0030',u:'DT-002',op:'Agus P.',pit:'Pit A2',stk:'ROM 2',mat:'Coal',jam:'11:38',gross:'37.8 t',tare:'19.0 t',netto:'18.8 t',rev:'Rp 846.000',st:'manual'},
+  {sj:'SJ-0029',u:'DT-001',op:'Budi S.',pit:'Pit A1',stk:'ROM 1',mat:'Coal',jam:'11:31',gross:'38.0 t',tare:'19.0 t',netto:'19.0 t',rev:'Rp 855.000',st:'imported'},
+  {sj:'SJ-0028',u:'DT-005',op:'Slamet D.',pit:'Pit B1',stk:'ROM 3',mat:'OB',jam:'11:28',gross:'—',tare:'—',netto:'—',rev:'—',st:'pending'},
+  {sj:'SJ-0027',u:'DT-003',op:'Hendra K.',pit:'Pit A2',stk:'ROM 1',mat:'Coal',jam:'11:15',gross:'37.5 t',tare:'20.0 t',netto:'17.5 t',rev:'Rp 787.500',st:'mismatch'},
+  {sj:'SJ-0026',u:'DT-008',op:'Dedi S.',pit:'Pit A3',stk:'ROM 2',mat:'Coal',jam:'11:09',gross:'38.2 t',tare:'19.1 t',netto:'19.1 t',rev:'Rp 859.500',st:'manual'},
+  {sj:'SJ-0025',u:'DT-005',op:'Slamet D.',pit:'Pit B1',stk:'ROM 3',mat:'OB',jam:'11:02',gross:'—',tare:'—',netto:'—',rev:'—',st:'pending'},
+  {sj:'SJ-0024',u:'DT-006',op:'Yusuf A.',pit:'Pit A2',stk:'ROM 1',mat:'Coal',jam:'10:58',gross:'38.1 t',tare:'19.0 t',netto:'19.1 t',rev:'Rp 859.500',st:'manual'},
+];
+
+document.getElementById('sjTableBody').innerHTML = sjData.map(r => {
+  const isDash = v => v === '—' ? '<span style="color:var(--text-muted)">—</span>' : v;
+  return '<tr>' +
+    '<td><strong style="font-size:12px">' + r.sj + '</strong></td>' +
+    '<td><span class="tag">' + r.u + '</span></td>' +
+    '<td class="muted">' + r.op + '</td>' +
+    '<td class="muted" style="font-size:12px">' + r.pit + ' → ' + r.stk + '</td>' +
+    '<td><span class="badge badge-manual">' + r.mat + '</span></td>' +
+    '<td class="muted tnum">' + r.jam + '</td>' +
+    '<td class="tnum">' + isDash(r.gross) + '</td>' +
+    '<td class="tnum">' + isDash(r.tare) + '</td>' +
+    '<td class="tnum"><strong>' + isDash(r.netto) + '</strong></td>' +
+    '<td class="tnum" style="font-size:12px">' + r.rev + '</td>' +
+    '<td><span class="badge badge-' + r.st + '">' + r.st + '</span></td>' +
+    '<td><div style="display:flex;gap:4px">' +
+    '<button class="btn btn-ghost btn-sm" onclick="openModal(\'editSJModal\')">✏</button>' +
+    (r.st === 'mismatch' ? '<button class="btn btn-sm" style="background:#FDE8D0;color:#8B4513;font-size:11px">⚠</button>' : '') +
+    '</div></td>' +
+    '</tr>';
+}).join('');
+
+// Mapping columns
+const mappings = [
+  ['Kolom "NO SJ"','No. Surat Jalan'],['Kolom "GROSS KG"','Berat Gross (kg)'],
+  ['Kolom "TARE KG"','Berat Tare (kg)'],['Kolom "TGL"','Tanggal (validasi)'],
+];
+document.getElementById('mappingCols').innerHTML =
+  '<div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:.7px">Mapping Kolom Excel</div>' +
+  mappings.map(([k,v]) =>
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">' +
+    '<span style="font-size:12px;color:var(--text-muted);width:160px">' + k + '</span>' +
+    '<span style="color:var(--brown-light)">→</span>' +
+    '<span style="font-size:12px;font-weight:500">' + v + '</span>' +
+    '</div>'
+  ).join('');
+
+// Timbangan toggle
+document.getElementById('timbanganAda').addEventListener('change', function() {
+  const f = document.getElementById('timbanganFields');
+  f.style.opacity = this.checked ? '1' : '0.3';
+  f.style.pointerEvents = this.checked ? '' : 'none';
+});
+</script>
+</body>
+</html>

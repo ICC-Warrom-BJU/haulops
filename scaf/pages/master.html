@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Master Data — HAULOPS</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="main-wrapper">
+  <div id="topbarContainer"></div>
+  <main class="page-content">
+    <div class="page-header">
+      <div class="page-header-left"><h1>Master Data</h1><p>Konfigurasi referensi sistem · Unit, Operator, Lokasi, Material, Rate, Delay, Status Operation, Budget & Target</p></div>
+    </div>
+
+    <!-- Tab navigation — scrollable for many tabs -->
+    <div style="margin-bottom:20px">
+      <div class="tabs" id="masterTabs" style="flex-wrap:nowrap">
+        <div class="tab active" onclick="switchMaster('units')" data-tab="units">🚛 Unit DT</div>
+        <div class="tab" onclick="switchMaster('tipe_unit')" data-tab="tipe_unit">⚙ Tipe Unit</div>
+        <div class="tab" onclick="switchMaster('operators')" data-tab="operators">👷 Operator</div>
+        <div class="tab" onclick="switchMaster('lokasi')" data-tab="lokasi">📍 Pit & Stockpile</div>
+        <div class="tab" onclick="switchMaster('material')" data-tab="material">🪨 Material</div>
+        <div class="tab" onclick="switchMaster('rate')" data-tab="rate">💰 Hauling Rate</div>
+        <div class="tab" onclick="switchMaster('netto')" data-tab="netto">⚖ Netto Estimasi</div>
+        <div class="tab" onclick="switchMaster('delay')" data-tab="delay">⏸ Delay Types</div>
+        <div class="tab" onclick="switchMaster('status_op')" data-tab="status_op">🟢 Status Operation</div>
+        <div class="tab" onclick="switchMaster('budget')" data-tab="budget">🎯 Budget & Target</div>
+      </div>
+      <div id="tabHint" style="font-size:10px;color:var(--text-muted);padding:4px 2px;display:flex;align-items:center;gap:4px">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+        Geser untuk melihat semua tab &nbsp;·&nbsp; Tab aktif: <strong id="activeTabName" style="color:var(--brown-dark)">Unit DT</strong>
+      </div>
+    </div>
+
+    <!-- TAB: Unit DT -->
+    <div id="tab-units">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="search-box"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input placeholder="Cari kode unit, no. polisi..."></div>
+          <select class="filter-select"><option>Semua Tipe</option><option>DT Kecil</option><option>DT Besar</option></select>
+          <select class="filter-select"><option>Semua Branch</option><option>Kalimantan A</option></select>
+        </div>
+        <button class="btn btn-gold" onclick="openModal('addUnitModal')">+ Tambah Unit</button>
+      </div>
+      <div class="card"><div class="table-wrap"><table><thead><tr><th>Kode Unit</th><th>No. Polisi</th><th>No. Rangka</th><th>No. Mesin</th><th>Tipe Unit</th><th>Kapasitas</th><th>Tahun</th><th>Branch</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="unitsBody"></tbody></table></div></div>
+    </div>
+
+    <!-- TAB: Tipe Unit -->
+    <div id="tab-tipe_unit" style="display:none">
+      <div class="toolbar">
+        <div class="toolbar-left"></div>
+        <button class="btn btn-gold" onclick="openModal('addTipeUnitModal')">+ Tambah Tipe Unit</button>
+      </div>
+      <div class="card"><div class="table-wrap"><table><thead><tr><th>Kode Tipe</th><th>Nama Tipe</th><th>Kapasitas (ton)</th><th>Budget Breakdown (jam/hari)</th><th>Budget Ratio BBM (L/ton)</th><th>Target Rev. Bulanan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="tipeUnitBody"></tbody></table></div></div>
+
+      <!-- Target Produksi per Material per Bulan per Tipe Unit -->
+      <div class="card mt-16">
+        <div class="card-header">
+          <span class="card-title">Target Produksi per Material per Bulan per Tipe Unit</span>
+          <button class="btn btn-gold btn-sm" onclick="openModal('addBudgetMaterialModal')">+ Tambah Target</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Tipe Unit</th><th>Material</th><th>Bulan</th><th>Tahun</th><th>Target Ritase</th><th>Target Tonase</th><th>Aksi</th></tr></thead>
+            <tbody id="budgetMaterialBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Operators -->
+    <div id="tab-operators" style="display:none">
+      <div class="toolbar">
+        <div class="toolbar-left"><div class="search-box"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input placeholder="Cari nama / NIK..."></div></div>
+        <button class="btn btn-gold" onclick="openModal('addOperatorModal')">+ Tambah Operator</button>
+      </div>
+      <div class="card"><div class="table-wrap"><table><thead><tr><th>Nama</th><th>NIK</th><th>No. Telepon</th><th>SIM</th><th>Tgl Lahir</th><th>Tgl Bergabung</th><th>Kontak Darurat</th><th>Branch</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="operatorsBody"></tbody></table></div></div>
+    </div>
+
+    <!-- TAB: Lokasi -->
+    <div id="tab-lokasi" style="display:none">
+      <div class="grid-2">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="font-size:15px;font-weight:600">Pit / Area Loading</h3>
+            <button class="btn btn-gold btn-sm" onclick="resetFormLokasi();openModal('addLokasiModal')">+ Tambah Pit</button>
+          </div>
+          <div class="card"><div class="table-wrap"><table><thead><tr><th>Nama Pit</th><th>Kode Area</th><th>Material Dominan</th><th>Jarak Pit ke SP (km)</th><th>Stockpile Tujuan</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="pitsBody"></tbody></table></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="font-size:15px;font-weight:600">Stockpile / Dumping Point</h3>
+            <button class="btn btn-gold btn-sm">+ Tambah Stockpile</button>
+          </div>
+          <div class="card"><div class="table-wrap"><table><thead><tr><th>Nama Stockpile</th><th>Kode</th><th>Kapasitas (ton)</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="stockpileBody"></tbody></table></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Material -->
+    <div id="tab-material" style="display:none">
+      <div class="toolbar"><div class="toolbar-left"></div><button class="btn btn-gold" onclick="showToast('Form tambah material')">+ Tambah Material</button></div>
+      <div class="card"><div class="table-wrap"><table><thead><tr><th>Nama Material</th><th>Kode</th><th>Kategori</th><th>Satuan</th><th>Target Produksi Bulanan (ton)</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="materialBody"></tbody></table></div></div>
+    </div>
+
+    <!-- TAB: Rate -->
+    <div id="tab-rate" style="display:none">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <select class="filter-select"><option>Semua Branch</option><option>Kalimantan A</option></select>
+          <select class="filter-select"><option>Semua Material</option><option>Nikel OB</option><option>Nikel ORE</option></select>
+        </div>
+        <button class="btn btn-gold" onclick="openModal('addRateModal')">+ Tambah Rate</button>
+      </div>
+      <div class="card"><div class="table-wrap"><table><thead><tr><th>Branch</th><th>Tipe Unit</th><th>Material</th><th>Pit</th><th>Stockpile</th><th>Rate (Rp/ton)</th><th>Berlaku Dari</th><th>Sampai</th><th>Aksi</th></tr></thead><tbody id="rateBody"></tbody></table></div></div>
+    </div>
+
+    <!-- TAB: Netto Estimasi -->
+    <div id="tab-netto" style="display:none">
+      <div class="alert alert-info">Konfigurasi ini hanya untuk branch dengan skema <strong>WITHOUT_TIMBANGAN</strong>. Netto estimasi = kapasitas unit × faktor muatan.</div>
+      <div class="toolbar" style="margin-top:12px">
+        <div class="toolbar-left">
+          <select class="filter-select"><option>Project NPM Konawe (WITHOUT_TIMBANGAN)</option></select>
+          <select class="filter-select"><option>Juni 2026</option><option>Juli 2026</option><option>Agustus 2026</option></select>
+        </div>
+        <button class="btn btn-outline" onclick="showToast('Generate per Bulan: Juni → Juli 2026')">📋 Generate per Bulan (Copy)</button>
+        <button class="btn btn-gold" onclick="openModal('addNettoModal')">+ Tambah Konfigurasi</button>
+      </div>
+      <div class="card"><div class="table-wrap"><table><thead><tr><th>Branch</th><th>Tipe Unit</th><th>Material</th><th>Netto Estimasi (ton/trip)</th><th>Faktor Muatan (%)</th><th>Bulan</th><th>Aksi</th></tr></thead><tbody id="nettoBody"></tbody></table></div></div>
+    </div>
+
+    <!-- TAB: Delay Types -->
+    <div id="tab-delay" style="display:none">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <select class="filter-select"><option>Semua Scope</option><option>Fleet Wide</option><option>Per Unit</option></select>
+          <select class="filter-select"><option>Semua Kategori</option><option>Cuaca</option><option>Operasional</option><option>Mekanik</option></select>
+          <select class="filter-select"><option>Juni 2026</option><option>Juli 2026</option><option>Agustus 2026</option></select>
+        </div>
+        <button class="btn btn-outline" onclick="showToast('Generate per Bulan: copy delay types ke bulan berikutnya')">📋 Generate per Bulan (Copy)</button>
+        <button class="btn btn-gold" onclick="openModal('addDelayTypeModal')">+ Tambah Delay Type</button>
+      </div>
+      <div class="card"><div class="table-wrap"><table><thead><tr><th>Kode</th><th>Nama</th><th>Kategori</th><th>Scope</th><th>Budget (mnt)</th><th>Kena PA/UA</th><th>Status</th><th>Bulan</th><th>Aksi</th></tr></thead><tbody id="delayTypesBody"></tbody></table></div></div>
+    </div>
+
+    <!-- TAB: Budget & Target -->
+    <div id="tab-budget" style="display:none">
+      <div class="alert alert-info mb-16">
+        Semua konfigurasi budget dan target dikelola di sini. Nilainya digunakan sebagai pembanding "actual vs budget" di seluruh laporan sistem.
+        <span style="float:right">
+          <select class="filter-select" style="font-size:11px;padding:3px 8px"><option>Juni 2026</option><option>Juli 2026</option><option>Agustus 2026</option></select>
+          <button class="btn btn-outline btn-sm" onclick="showToast('Budget & Target berhasil di-copy ke bulan berikutnya')">📋 Generate per Bulan (Copy)</button>
+        </span>
+      </div>
+      <div class="grid-2" style="gap:20px">
+        <!-- Budget Breakdown per Unit -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="font-size:14px;font-weight:600">Budget Breakdown per Unit (jam/hari)</h3>
+            <button class="btn btn-gold btn-sm" onclick="showToast('Form edit budget breakdown')">✏ Edit</button>
+          </div>
+          <div class="card"><div class="table-wrap"><table><thead><tr><th>Unit</th><th>Tipe</th><th>Budget (jam/hari)</th><th>Berlaku Dari</th><th>Aksi</th></tr></thead><tbody id="budgetBdBody"></tbody></table></div></div>
+        </div>
+        <!-- Target Produksi Bulanan -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="font-size:14px;font-weight:600">Target Produksi Bulanan (per Branch)</h3>
+            <button class="btn btn-gold btn-sm" onclick="showToast('Form tambah target')">+ Tambah Target</button>
+          </div>
+          <div class="card"><div class="table-wrap"><table><thead><tr><th>Branch</th><th>Material</th><th>Bulan</th><th>Target (ton)</th><th>Aksi</th></tr></thead><tbody id="targetProdBody"></tbody></table></div></div>
+        </div>
+        <!-- Budget BBM Ratio -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="font-size:14px;font-weight:600">Budget Ratio BBM (per Tipe Unit)</h3>
+            <button class="btn btn-gold btn-sm" onclick="showToast('Form edit budget BBM')">✏ Edit</button>
+          </div>
+          <div class="card"><div class="table-wrap"><table><thead><tr><th>Tipe Unit</th><th>Budget L/Ton</th><th>Budget L/Jam</th><th>Budget Km/L</th><th>Berlaku Dari</th><th>Aksi</th></tr></thead><tbody id="budgetBbmBody"></tbody></table></div></div>
+        </div>
+        <!-- Target Revenue -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="font-size:14px;font-weight:600">Target Revenue Bulanan (per Branch)</h3>
+            <button class="btn btn-gold btn-sm" onclick="showToast('Form tambah target revenue')">+ Tambah</button>
+          </div>
+          <div class="card"><div class="table-wrap"><table><thead><tr><th>Branch</th><th>Bulan</th><th>Target Revenue (Rp)</th><th>Keterangan</th><th>Aksi</th></tr></thead><tbody id="targetRevBody"></tbody></table></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Status Operation -->
+    <div id="tab-status_op" style="display:none">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="search-box"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input placeholder="Cari kode status..." id="statusOpSearch" oninput="renderStatusOp()"></div>
+          <select class="filter-select" id="statusOpGroupFilter" onchange="renderStatusOp()"><option value="">Semua Group</option></select>
+        </div>
+        <button class="btn btn-gold" onclick="openModal('addStatusOpModal')">+ Tambah Status</button>
+      </div>
+      <div class="card"><div class="table-wrap"><table><thead><tr><th>Kode</th><th>Nama Status</th><th>Group</th><th>Warna</th><th>PA</th><th>UA</th><th>Produktivitas</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="statusOpBody"></tbody></table></div></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="addUnitModal">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title">Tambah / Edit Unit DT</span><button class="modal-close" onclick="closeModal('addUnitModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-section-title">Identifikasi Unit</div>
+      <div class="form-row col-3">
+        <div class="form-group"><label class="form-label">Kode Unit <span class="req">*</span></label><input class="form-control" placeholder="DT-009"></div>
+        <div class="form-group"><label class="form-label">No. Polisi <span class="req">*</span></label><input class="form-control" placeholder="KT 1238 AB"></div>
+        <div class="form-group"><label class="form-label">No. Rangka <span class="req">*</span></label><input class="form-control" placeholder="MHF50P31XM0..."></div>
+      </div>
+      <div class="form-row col-3">
+        <div class="form-group"><label class="form-label">No. Mesin <span class="req">*</span></label><input class="form-control" placeholder="4D56UAPVS..."></div>
+        <div class="form-group"><label class="form-label">Tipe Unit <span class="req">*</span></label><select class="form-control"><option>DT Kecil (20T)</option><option>DT Besar (40T)</option></select></div>
+        <div class="form-group"><label class="form-label">Tahun Produksi</label><input class="form-control" type="number" placeholder="2022"></div>
+      </div>
+      <div class="form-section-title mt-16">Penempatan & Budget</div>
+      <div class="form-row col-3">
+        <div class="form-group"><label class="form-label">Branch <span class="req">*</span></label><select class="form-control"><option>Kalimantan A</option><option>Kalimantan B</option></select></div>
+        <div class="form-group"><label class="form-label">Budget Breakdown (jam/hari) <span class="req">*</span></label><input class="form-control" type="number" step="0.5" placeholder="3"><div class="form-hint">Override dari tipe unit jika berbeda</div></div>
+        <div class="form-group"><label class="form-label">Budget Ratio BBM (L/ton)</label><input class="form-control" type="number" step="0.01" placeholder="0.30"><div class="form-hint">Override dari tipe unit jika berbeda</div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addUnitModal')">Batal</button>
+      <button class="btn btn-primary" onclick="closeModal('addUnitModal');showToast('Unit berhasil disimpan')">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addOperatorModal">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title">Tambah / Edit Operator</span><button class="modal-close" onclick="closeModal('addOperatorModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row col-3">
+        <div class="form-group"><label class="form-label">Nama Lengkap <span class="req">*</span></label><input class="form-control" placeholder="Nama lengkap"></div>
+        <div class="form-group"><label class="form-label">NIK <span class="req">*</span></label><input class="form-control" placeholder="16 digit NIK"></div>
+        <div class="form-group"><label class="form-label">No. Telepon</label><input class="form-control" placeholder="0812-xxxx-xxxx"></div>
+      </div>
+      <div class="form-row col-3">
+        <div class="form-group"><label class="form-label">Tanggal Lahir</label><input class="form-control" type="date"></div>
+        <div class="form-group"><label class="form-label">Tanggal Bergabung</label><input class="form-control" type="date"></div>
+        <div class="form-group"><label class="form-label">Branch <span class="req">*</span></label><select class="form-control"><option>Kalimantan A</option><option>Kalimantan B</option></select></div>
+      </div>
+      <div class="form-section-title mt-16">SIM & Lisensi</div>
+      <div class="form-row col-3">
+        <div class="form-group"><label class="form-label">No. SIM <span class="req">*</span></label><input class="form-control" placeholder="Nomor SIM"></div>
+        <div class="form-group"><label class="form-label">Jenis SIM</label><select class="form-control"><option>SIM B1</option><option>SIM B2</option><option>SIM A</option></select></div>
+        <div class="form-group"><label class="form-label">Berlaku Sampai</label><input class="form-control" type="date"></div>
+      </div>
+      <div class="form-section-title mt-16">Kontak Darurat</div>
+      <div class="form-row col-3">
+        <div class="form-group"><label class="form-label">Nama Kontak Darurat <span class="req">*</span></label><input class="form-control" placeholder="Nama lengkap"></div>
+        <div class="form-group"><label class="form-label">Hubungan</label><select class="form-control"><option>Istri/Suami</option><option>Orang Tua</option><option>Saudara</option><option>Lainnya</option></select></div>
+        <div class="form-group"><label class="form-label">No. Telepon Darurat <span class="req">*</span></label><input class="form-control" placeholder="0812-xxxx-xxxx"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addOperatorModal')">Batal</button>
+      <button class="btn btn-primary" onclick="closeModal('addOperatorModal');showToast('Operator berhasil disimpan')">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addLokasiModal">
+  <div class="modal modal-md">
+    <div class="modal-header"><span class="modal-title">Tambah Pit Baru</span><button class="modal-close" onclick="closeModal('addLokasiModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row col-2">
+        <div class="form-group"><label class="form-label">Nama Pit <span class="req">*</span></label><input class="form-control" id="pitNama" placeholder="Pit C1"></div>
+        <div class="form-group"><label class="form-label">Kode Area <span class="req">*</span></label><input class="form-control" id="pitKode" placeholder="C1"></div>
+      </div>
+      <div class="form-row col-2">
+        <div class="form-group"><label class="form-label">Material Dominan <span class="req">*</span></label>
+          <select class="form-control" id="pitMaterial">
+            <option value="Nikel OB">Nikel OB</option>
+            <option value="Nikel ORE">Nikel ORE</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Jarak Pit ke SP (km) <span class="req">*</span></label><input class="form-control" type="number" step="0.1" id="pitJarak" placeholder="9.8"></div>
+      </div>
+      <div class="form-row col-2">
+        <div class="form-group"><label class="form-label">Stockpile Tujuan <span class="req">*</span></label>
+          <select class="form-control" id="pitStockpile">
+            <option value="ROM 1">ROM 1</option>
+            <option value="ROM 2">ROM 2</option>
+            <option value="Disposal A">Disposal A</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Status</label>
+          <select class="form-control" id="pitStatus">
+            <option value="Aktif">Aktif</option>
+            <option value="Non-Aktif">Non-Aktif</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addLokasiModal')">Batal</button>
+      <button class="btn btn-primary" onclick="simpanPit()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addTipeUnitModal">
+  <div class="modal modal-md">
+    <div class="modal-header"><span class="modal-title">Tambah / Edit Tipe Unit</span><button class="modal-close" onclick="closeModal('addTipeUnitModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row col-2"><div class="form-group"><label class="form-label">Kode Tipe <span class="req">*</span></label><input class="form-control" placeholder="DT-KECIL" style="font-family:monospace"></div><div class="form-group"><label class="form-label">Nama Tipe <span class="req">*</span></label><input class="form-control" placeholder="DT Kecil"></div></div>
+      <div class="form-row col-2"><div class="form-group"><label class="form-label">Kapasitas (ton) <span class="req">*</span></label><input class="form-control" type="number" placeholder="20"></div><div class="form-group"><label class="form-label">Budget Breakdown (jam/hari) <span class="req">*</span></label><input class="form-control" type="number" step="0.5" placeholder="3"></div></div>
+      <div class="form-row col-3"><div class="form-group"><label class="form-label">Budget L/Ton</label><input class="form-control" type="number" step="0.01" placeholder="0.30"></div><div class="form-group"><label class="form-label">Budget L/Jam</label><input class="form-control" type="number" step="0.1" placeholder="20.0"></div><div class="form-group"><label class="form-label">Budget Km/Liter</label><input class="form-control" type="number" step="0.1" placeholder="3.0"></div></div>
+      <div class="form-group"><label class="form-label">Target Revenue Bulanan (Rp)</label><input class="form-control" type="number" placeholder="500000000"><div class="form-hint">Per unit per bulan sebagai acuan KPI</div></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('addTipeUnitModal')">Batal</button><button class="btn btn-primary" onclick="closeModal('addTipeUnitModal');showToast('Tipe unit berhasil disimpan')">Simpan</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addBudgetMaterialModal">
+  <div class="modal modal-md">
+    <div class="modal-header"><span class="modal-title">Tambah Target Produksi per Material</span><button class="modal-close" onclick="closeModal('addBudgetMaterialModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row col-2">
+        <div class="form-group"><label class="form-label">Tipe Unit <span class="req">*</span></label><select class="form-control"><option>DT Kecil</option><option>DT Besar</option></select></div>
+        <div class="form-group"><label class="form-label">Material <span class="req">*</span></label><select class="form-control"><option>Nikel OB</option><option>Nikel ORE</option></select></div>
+      </div>
+      <div class="form-row col-3">
+        <div class="form-group"><label class="form-label">Bulan <span class="req">*</span></label><select class="form-control"><option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option selected>Juni</option><option>Juli</option><option>Agustus</option><option>September</option><option>Oktober</option><option>November</option><option>Desember</option></select></div>
+        <div class="form-group"><label class="form-label">Tahun <span class="req">*</span></label><input class="form-control" type="number" value="2026"></div>
+        <div class="form-group"><label class="form-label">Target Ritase</label><input class="form-control" type="number" placeholder="500"></div>
+      </div>
+      <div class="form-row col-2">
+        <div class="form-group"><label class="form-label">Target Tonase <span class="req">*</span></label><input class="form-control" type="number" placeholder="9500"></div>
+        <div class="form-group"><label class="form-label">EWH Target (Jam)</label><input class="form-control" type="number" step="0.5" placeholder="176"><div class="form-hint">Total jam operasi efektif target</div></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('addBudgetMaterialModal')">Batal</button><button class="btn btn-primary" onclick="closeModal('addBudgetMaterialModal');showToast('Target produksi material berhasil disimpan')">Simpan</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addRateModal">
+  <div class="modal modal-md"><div class="modal-header"><span class="modal-title">Tambah / Edit Hauling Rate</span><button class="modal-close" onclick="closeModal('addRateModal')">✕</button></div><div class="modal-body"><div class="form-row col-2"><div class="form-group"><label class="form-label">Branch <span class="req">*</span></label><select class="form-control"><option>Kalimantan A</option></select></div><div class="form-group"><label class="form-label">Tipe Unit <span class="req">*</span></label><select class="form-control"><option>DT Kecil</option><option>DT Besar</option></select></div></div><div class="form-row col-2"><div class="form-group"><label class="form-label">Material <span class="req">*</span></label><select class="form-control"><option>Nikel OB</option><option>Nikel ORE</option></select></div><div class="form-group"><label class="form-label">Rate (Rp/ton) <span class="req">*</span></label><input class="form-control" type="number" placeholder="45000"></div></div><div class="form-row col-2"><div class="form-group"><label class="form-label">Berlaku Dari <span class="req">*</span></label><input class="form-control" type="date"></div><div class="form-group"><label class="form-label">Berlaku Sampai</label><input class="form-control" type="date"><div class="form-hint">Kosongkan jika berlaku seterusnya</div></div></div></div><div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('addRateModal')">Batal</button><button class="btn btn-primary" onclick="closeModal('addRateModal');showToast('Rate berhasil disimpan')">Simpan</button></div></div>
+</div>
+
+<div class="modal-overlay" id="addDelayTypeModal">
+  <div class="modal modal-md"><div class="modal-header"><span class="modal-title">Tambah / Edit Delay Type</span><button class="modal-close" onclick="closeModal('addDelayTypeModal')">✕</button></div><div class="modal-body"><div class="form-row col-2"><div class="form-group"><label class="form-label">Kode <span class="req">*</span></label><input class="form-control" placeholder="RAIN" style="font-family:monospace"></div><div class="form-group"><label class="form-label">Nama <span class="req">*</span></label><input class="form-control" placeholder="Hujan"></div></div><div class="form-row col-2"><div class="form-group"><label class="form-label">Kategori</label><select class="form-control"><option>Cuaca</option><option>Operasional</option><option>Mekanik</option><option>Administrasi</option></select></div><div class="form-group"><label class="form-label">Scope</label><select class="form-control"><option>🔴 Fleet Wide</option><option>🟡 Per Unit</option></select></div></div><div class="form-row col-2"><div class="form-group"><label class="form-label">Budget (menit)</label><input class="form-control" type="number" placeholder="60"><div class="form-hint">Kosongkan jika tidak ada batas</div></div><div class="form-group"><label class="form-label">Kena PA/UA?</label><div style="display:flex;gap:16px;margin-top:8px"><label class="checkbox-row"><input type="radio" name="kena_pa" checked> Ya</label><label class="checkbox-row"><input type="radio" name="kena_pa"> Tidak</label></div></div></div></div><div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('addDelayTypeModal')">Batal</button><button class="btn btn-primary" onclick="closeModal('addDelayTypeModal');showToast('Delay type berhasil disimpan')">Simpan</button></div></div>
+</div>
+
+<!-- Modal: Status Operation -->
+<div class="modal-overlay" id="addStatusOpModal">
+  <div class="modal modal-md">
+    <div class="modal-header"><span class="modal-title">Tambah / Edit Status Operation</span><button class="modal-close" onclick="closeModal('addStatusOpModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row col-2">
+        <div class="form-group"><label class="form-label">Kode Status <span class="req">*</span></label><input class="form-control" id="sopCode" placeholder="UTI" style="font-family:monospace;text-transform:uppercase"></div>
+        <div class="form-group"><label class="form-label">Nama Status <span class="req">*</span></label><input class="form-control" id="sopName" placeholder="Unit Trip Indikator"></div>
+      </div>
+      <div class="form-row col-2">
+        <div class="form-group"><label class="form-label">Group <span class="req">*</span></label>
+          <select class="form-control" id="sopGroup"><option value="UTILISASI">UTILISASI</option><option value="READY FOR USE">READY FOR USE</option><option value="BREAKDOWN">BREAKDOWN</option><option value="PREVENTIVE">PREVENTIVE</option><option value="ADJUSTMENT">ADJUSTMENT</option><option value="STANDBY">STANDBY</option><option value="LAINNYA">LAINNYA</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Warna <span class="req">*</span></label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="color" class="form-control" id="sopColor" value="#22C55E" style="width:50px;padding:4px;cursor:pointer">
+            <input class="form-control" id="sopColorHex" value="#22C55E" placeholder="#HEX" style="font-family:monospace" oninput="document.getElementById('sopColor').value=this.value">
+          </div>
+        </div>
+      </div>
+      <div class="form-section-title mt-16">Konfigurasi KPI</div>
+      <div class="form-row col-3">
+        <div class="form-group"><label class="checkbox-row"><input type="checkbox" id="sopIsPA" checked> Termasuk PA</label></div>
+        <div class="form-group"><label class="checkbox-row"><input type="checkbox" id="sopIsUA" checked> Termasuk UA</label></div>
+        <div class="form-group"><label class="checkbox-row"><input type="checkbox" id="sopIsProd" checked> Produktivitas</label></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addStatusOpModal')">Batal</button>
+      <button class="btn btn-primary" onclick="saveStatusOp()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+document.getElementById('sidebarContainer').innerHTML = renderSidebar('master');
+document.getElementById('topbarContainer').innerHTML = renderTopbar('Master Data');
+
+// Units — lengkap dengan no rangka, no mesin, budget BD
+const units=[
+  {kode:'DT-001',pol:'KT 1234 AB',rangka:'MHF50P31XM001',mesin:'4D56UAPVS001',tipe:'DT Kecil',kap:'20 ton',thn:2022,branch:'Kalimantan A',budgetBd:3,aktif:true},
+  {kode:'DT-002',pol:'KT 1235 AB',rangka:'MHF50P31XM002',mesin:'4D56UAPVS002',tipe:'DT Kecil',kap:'20 ton',thn:2022,branch:'Kalimantan A',budgetBd:3,aktif:true},
+  {kode:'DT-003',pol:'KT 1236 AB',rangka:'MHF50P31XM003',mesin:'4D56UAPVS003',tipe:'DT Kecil',kap:'20 ton',thn:2021,branch:'Kalimantan A',budgetBd:3,aktif:true},
+  {kode:'DT-004',pol:'KT 2001 CD',rangka:'NLMHD26Y0M001',mesin:'6HK1XYSV001',tipe:'DT Besar',kap:'40 ton',thn:2023,branch:'Kalimantan A',budgetBd:4,aktif:true},
+  {kode:'DT-005',pol:'KT 1237 AB',rangka:'MHF50P31XM005',mesin:'4D56UAPVS005',tipe:'DT Kecil',kap:'20 ton',thn:2022,branch:'Kalimantan A',budgetBd:3,aktif:true},
+];
+document.getElementById('unitsBody').innerHTML=units.map(r=>
+  '<tr>'+
+  '<td><strong>'+r.kode+'</strong></td>'+
+  '<td class="muted">'+r.pol+'</td>'+
+  '<td class="muted" style="font-size:11px;font-family:monospace">'+r.rangka+'</td>'+
+  '<td class="muted" style="font-size:11px;font-family:monospace">'+r.mesin+'</td>'+
+  '<td><span class="tag">'+r.tipe+'</span></td>'+
+  '<td class="tnum">'+r.kap+'</td>'+
+  '<td class="muted">'+r.thn+'</td>'+
+  '<td class="muted">'+r.branch+'</td>'+
+  '<td><span class="badge badge-'+(r.aktif?'approved':'rejected')+'">'+(r.aktif?'Aktif':'Nonaktif')+'</span></td>'+
+  '<td><button class="btn btn-ghost btn-sm" onclick="openModal(\'addUnitModal\')">✏</button></td>'+
+  '</tr>'
+).join('');
+
+// Tipe Unit
+const tipeUnits=[
+  {kode:'DT-KECIL',nama:'DT Kecil',kap:20,budgetBd:3,budgetLton:0.30,budgetLjam:20.0,budgetKmL:3.0,targetRev:'500 Jt'},
+  {kode:'DT-BESAR',nama:'DT Besar',kap:40,budgetBd:4,budgetLton:0.28,budgetLjam:18.0,budgetKmL:3.2,targetRev:'900 Jt'},
+];
+document.getElementById('tipeUnitBody').innerHTML=tipeUnits.map(r=>
+  '<tr>'+
+  '<td><span class="tag" style="font-family:monospace">'+r.kode+'</span></td>'+
+  '<td><strong>'+r.nama+'</strong></td>'+
+  '<td class="tnum">'+r.kap+' ton</td>'+
+  '<td class="tnum"><strong>'+r.budgetBd+' jam/hari</strong></td>'+
+  '<td class="tnum">'+r.budgetLton+' L/ton</td>'+
+  '<td class="tnum">Rp '+r.targetRev+'</td>'+
+  '<td><span class="badge badge-approved">Aktif</span></td>'+
+  '<td><button class="btn btn-ghost btn-sm" onclick="openModal(\'addTipeUnitModal\')">✏</button></td>'+
+  '</tr>'
+).join('');
+
+// Budget per Material per Bulan per Tipe Unit
+const budgetMaterial=[
+  {tipe:'DT Kecil', mat:'Nikel OB', bulan:'Juni', tahun:2026, targetRit:520, targetTon:9880},
+  {tipe:'DT Kecil', mat:'Nikel ORE', bulan:'Juni', tahun:2026, targetRit:480, targetTon:9120},
+  {tipe:'DT Besar', mat:'Nikel OB', bulan:'Juni', tahun:2026, targetRit:260, targetTon:9880},
+  {tipe:'DT Besar', mat:'Nikel ORE', bulan:'Juni', tahun:2026, targetRit:240, targetTon:9120},
+];
+document.getElementById('budgetMaterialBody').innerHTML=budgetMaterial.map(r=>
+  '<tr>'+
+  '<td><span class="tag">'+r.tipe+'</span></td>'+
+  '<td><span class="badge badge-manual">'+r.mat+'</span></td>'+
+  '<td>'+r.bulan+'</td>'+
+  '<td>'+r.tahun+'</td>'+
+  '<td class="tnum"><strong>'+r.targetRit.toLocaleString()+'</strong></td>'+
+  '<td class="tnum"><strong>'+r.targetTon.toLocaleString()+' ton</strong></td>'+
+  '<td><button class="btn btn-ghost btn-sm">✏</button></td>'+
+  '</tr>'
+).join('');
+
+// Operators — dengan SIM, kontak darurat
+const operators=[
+  {n:'Budi Santoso',nik:'6471011001001',tlp:'0812-3001-xxxx',sim:'B1 · 3471-0001-2025',tglLahir:'01/01/1985',bergabung:'01/03/2020',darurat:'Siti S. (Istri) · 0812-3002-xxxx',branch:'Kalimantan A'},
+  {n:'Agus Purnomo',nik:'6471011001002',tlp:'0812-3002-xxxx',sim:'B1 · 3471-0002-2024',tglLahir:'15/05/1988',bergabung:'15/06/2021',darurat:'Dewi P. (Istri) · 0812-3003-xxxx',branch:'Kalimantan A'},
+  {n:'Hendra Kusuma',nik:'6471011001003',tlp:'0812-3003-xxxx',sim:'B2 · 3471-0003-2026',tglLahir:'20/08/1990',bergabung:'01/01/2022',darurat:'Ahmad K. (Ayah) · 0812-3004-xxxx',branch:'Kalimantan A'},
+];
+document.getElementById('operatorsBody').innerHTML=operators.map(r=>
+  '<tr>'+
+  '<td><strong>'+r.n+'</strong></td>'+
+  '<td class="muted" style="font-family:monospace;font-size:11px">'+r.nik+'</td>'+
+  '<td class="muted">'+r.tlp+'</td>'+
+  '<td style="font-size:11px"><span class="badge badge-imported" style="font-size:10px">'+r.sim+'</span></td>'+
+  '<td class="muted" style="font-size:11px">'+r.tglLahir+'</td>'+
+  '<td class="muted" style="font-size:11px">'+r.bergabung+'</td>'+
+  '<td style="font-size:11px;color:var(--text-secondary)">'+r.darurat+'</td>'+
+  '<td class="muted">'+r.branch+'</td>'+
+  '<td><span class="badge badge-approved">Aktif</span></td>'+
+  '<td><button class="btn btn-ghost btn-sm" onclick="openModal(\'addOperatorModal\')">✏</button></td>'+
+  '</tr>'
+).join('');
+
+// Pits
+const pits=[
+  {n:'Pit A1',k:'AREA-A1',mat:'Nikel ORE',jarak:'9.8 km',stk:'ROM 1'},
+  {n:'Pit A2',k:'AREA-A2',mat:'Nikel ORE',jarak:'10.2 km',stk:'ROM 2'},
+  {n:'Pit A3',k:'AREA-A3',mat:'Nikel ORE',jarak:'12.5 km',stk:'ROM 1'},
+  {n:'Pit B1',k:'AREA-B1',mat:'Nikel OB',jarak:'15.0 km',stk:'Disposal A'},
+];
+function renderPits() {
+  document.getElementById('pitsBody').innerHTML=pits.map(p=>
+  '<tr>'+
+  '<td><strong>'+p.n+'</strong></td>'+
+  '<td><span class="tag">'+p.k+'</span></td>'+
+  '<td><span class="badge badge-manual" style="font-size:10px">'+p.mat+'</span></td>'+
+  '<td class="tnum">'+p.jarak+'</td>'+
+  '<td>'+p.stk+'</td>'+
+  '<td><span class="badge badge-approved">Aktif</span></td>'+
+  '<td><button class="btn btn-ghost btn-sm">✏</button></td>'+
+  '</tr>'
+).join('');
+}
+renderPits();
+
+function resetFormLokasi() {
+  ['pitNama','pitKode','pitJarak'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
+function simpanPit() {
+  const nama = document.getElementById('pitNama').value.trim();
+  const kode = document.getElementById('pitKode').value.trim();
+  const material = document.getElementById('pitMaterial').value;
+  const jarak = document.getElementById('pitJarak').value;
+  const stockpile = document.getElementById('pitStockpile').value;
+  if (!nama || !kode || !jarak) {
+    showToast('Nama Pit, Kode Area, dan Jarak wajib diisi', 'warn');
+    return;
+  }
+  pits.push({ n: nama, k: kode, mat: material, jarak: jarak + ' km', stk: stockpile });
+  renderPits();
+  closeModal('addLokasiModal');
+  showToast('Pit ' + nama + ' berhasil ditambahkan');
+}
+
+// Stockpiles
+const stk=[{n:'ROM 1',k:'ROM-01',kap:'50.000 ton'},{n:'ROM 2',k:'ROM-02',kap:'50.000 ton'},{n:'Disposal A',k:'DSP-A',kap:'Unlimited'}];
+document.getElementById('stockpileBody').innerHTML=stk.map(p=>
+  '<tr><td><strong>'+p.n+'</strong></td><td><span class="tag">'+p.k+'</span></td><td class="tnum">'+p.kap+'</td><td><span class="badge badge-approved">Aktif</span></td><td><button class="btn btn-ghost btn-sm">✏</button></td></tr>'
+).join('');
+
+// Materials
+const mats=[
+  {n:'Nikel OB',k:'NIK-OB',kat:'Overburden',sat:'BCM',target:'80.000'},
+  {n:'Nikel ORE',k:'NIK-ORE',kat:'Ore / Bijih',sat:'Ton',target:'45.000'},
+];
+document.getElementById('materialBody').innerHTML=mats.map(m=>
+  '<tr><td><strong>'+m.n+'</strong></td><td><span class="tag">'+m.k+'</span></td><td class="muted">'+m.kat+'</td><td class="muted">'+m.sat+'</td><td class="tnum">'+m.target+' ton</td><td><span class="badge badge-approved">Aktif</span></td><td><button class="btn btn-ghost btn-sm">✏</button></td></tr>'
+).join('');
+
+// Rates
+const rates=[
+  {br:'Kalimantan A',tu:'DT Kecil',mat:'Nikel ORE',pit:'Semua',stk:'Semua',rate:'45.000',dari:'01 Jan 2026'},
+  {br:'Kalimantan A',tu:'DT Besar',mat:'Nikel ORE',pit:'Semua',stk:'Semua',rate:'42.000',dari:'01 Jan 2026'},
+  {br:'Kalimantan A',tu:'DT Kecil',mat:'Nikel OB',pit:'Semua',stk:'Semua',rate:'28.000',dari:'01 Jan 2026'},
+  {br:'Kalimantan B',tu:'DT Kecil',mat:'Nikel ORE',pit:'Semua',stk:'Semua',rate:'48.000',dari:'01 Mar 2026'},
+];
+document.getElementById('rateBody').innerHTML=rates.map(r=>
+  '<tr><td class="muted">'+r.br+'</td><td><span class="tag">'+r.tu+'</span></td><td><span class="badge badge-manual">'+r.mat+'</span></td><td class="muted">'+r.pit+'</td><td class="muted">'+r.stk+'</td><td class="tnum"><strong>Rp '+r.rate+'</strong></td><td class="muted">'+r.dari+'</td><td class="muted">—</td><td><button class="btn btn-ghost btn-sm" onclick="openModal(\'addRateModal\')">✏</button></td></tr>'
+).join('');
+
+// Netto estimasi
+const nettos=[
+  {br:'Kalimantan B',tu:'DT Kecil',mat:'Nikel ORE',netto:'18.5',faktor:'92.5%',bulan:'Juni 2026'},
+  {br:'Kalimantan B',tu:'DT Besar',mat:'Nikel ORE',netto:'37.0',faktor:'92.5%',bulan:'Juni 2026'},
+  {br:'Kalimantan B',tu:'DT Kecil',mat:'Nikel OB',netto:'19.0',faktor:'95%',bulan:'Juni 2026'},
+  {br:'Kalimantan B',tu:'DT Kecil',mat:'Nikel ORE',netto:'18.5',faktor:'92.5%',bulan:'Juli 2026'},
+  {br:'Kalimantan B',tu:'DT Besar',mat:'Nikel ORE',netto:'37.0',faktor:'92.5%',bulan:'Juli 2026'},
+];
+document.getElementById('nettoBody').innerHTML=nettos.map(r=>
+  '<tr><td class="muted">'+r.br+'</td><td><span class="tag">'+r.tu+'</span></td><td><span class="badge badge-manual">'+r.mat+'</span></td><td class="tnum"><strong>'+r.netto+' ton/trip</strong></td><td class="tnum">'+r.faktor+'</td><td><span class="badge badge-pending">'+r.bulan+'</span></td><td><button class="btn btn-ghost btn-sm">✏</button></td></tr>'
+).join('');
+
+// Delay types
+const delayTypes=[
+  {k:'RAIN',n:'Hujan',kat:'Cuaca',sc:'fleet',b:60,pa:true,bln:'Juni 2026'},
+  {k:'SLIPPERY',n:'Jalan Licin',kat:'Cuaca',sc:'fleet',b:45,pa:true,bln:'Juni 2026'},
+  {k:'FLOOD',n:'Genangan / Banjir',kat:'Cuaca',sc:'fleet',b:90,pa:true,bln:'Juni 2026'},
+  {k:'PIT_OPEN',n:'Buka Tutup Pit',kat:'Operasional',sc:'fleet',b:30,pa:true,bln:'Juni 2026'},
+  {k:'ROAD_CLOSE',n:'Buka Tutup Jalan',kat:'Operasional',sc:'fleet',b:30,pa:true,bln:'Juni 2026'},
+  {k:'SAFETY_TALK',n:'Safety Talk / P5M',kat:'Administrasi',sc:'fleet',b:30,pa:false,bln:'Juni 2026'},
+  {k:'BREAKDOWN',n:'Breakdown',kat:'Mekanik',sc:'unit',b:null,pa:true,bln:'Juni 2026'},
+  {k:'PM',n:'Preventive Maintenance',kat:'Mekanik',sc:'unit',b:null,pa:true,bln:'Juni 2026'},
+  {k:'FUELING',n:'Pengisian BBM',kat:'Operasional',sc:'unit',b:20,pa:true,bln:'Juni 2026'},
+  {k:'WAITING_LOAD',n:'Menunggu Loader/Excavator',kat:'Operasional',sc:'unit',b:20,pa:true,bln:'Juni 2026'},
+  {k:'WAITING_DUMP',n:'Antrian Timbangan/Dumping',kat:'Operasional',sc:'unit',b:20,pa:true,bln:'Juni 2026'},
+  {k:'ISTIRAHAT',n:'Istirahat / Makan',kat:'Administrasi',sc:'unit',b:30,pa:false,bln:'Juni 2026'},
+  {k:'NO_DRIVER',n:'No Driver / Tidak Ada Operator',kat:'Operasional',sc:'fleet',b:30,pa:true,bln:'Juni 2026'},
+  {k:'CHANGE_SHIFT',n:'Change Shift / Ganti Shift',kat:'Operasional',sc:'fleet',b:20,pa:true,bln:'Juni 2026'},
+  {k:'P2H',n:'P2H (Pemeriksaan Harian)',kat:'Mekanik',sc:'unit',b:30,pa:true,bln:'Juni 2026'},
+  {k:'ROAD_REPAIR',n:'Perbaikan Jalan / LP',kat:'Operasional',sc:'fleet',b:60,pa:true,bln:'Juni 2026'},
+  {k:'SUNDAY_BREAK',n:'Sunday Break / Holiday Break',kat:'Administrasi',sc:'fleet',b:null,pa:false,bln:'Juni 2026'},
+];
+document.getElementById('delayTypesBody').innerHTML=delayTypes.map(r=>
+  '<tr>'+
+  '<td><span class="tag" style="font-family:monospace;font-size:10px">'+r.k+'</span></td>'+
+  '<td><strong>'+r.n+'</strong></td>'+
+  '<td class="muted">'+r.kat+'</td>'+
+  '<td><span class="badge badge-'+(r.sc==='fleet'?'fleet':'unit')+'">'+(r.sc==='fleet'?'🔴 Fleet':'🟡 Unit')+'</span></td>'+
+  '<td class="tnum">'+(r.b!==null?r.b:'—')+'</td>'+
+  '<td><span style="color:'+(r.pa?'#16A34A':'#888')+';font-size:12px">'+(r.pa?'✓ Ya':'✗ Tidak')+'</span></td>'+
+  '<td><span class="badge badge-approved">Aktif</span></td>'+
+  '<td><span class="badge badge-pending">'+r.bln+'</span></td>'+
+  '<td><button class="btn btn-ghost btn-sm" onclick="openModal(\'addDelayTypeModal\')">✏</button></td>'+
+  '</tr>'
+).join('');
+
+// Budget BD per unit
+const budgetBd=[
+  {unit:'DT-001',tipe:'DT Kecil',budget:3,dari:'01 Jan 2026'},
+  {unit:'DT-002',tipe:'DT Kecil',budget:3,dari:'01 Jan 2026'},
+  {unit:'DT-003',tipe:'DT Kecil',budget:3,dari:'01 Jan 2026'},
+  {unit:'DT-004',tipe:'DT Besar',budget:4,dari:'01 Jan 2026'},
+  {unit:'DT-005',tipe:'DT Kecil',budget:3.5,dari:'01 Mar 2026'},
+];
+document.getElementById('budgetBdBody').innerHTML=budgetBd.map(r=>
+  '<tr><td><span class="tag">'+r.unit+'</span></td><td class="muted">'+r.tipe+'</td><td class="tnum"><strong>'+r.budget+' jam/hari</strong></td><td class="muted">'+r.dari+'</td><td><button class="btn btn-ghost btn-sm">✏</button></td></tr>'
+).join('');
+
+// Target produksi
+const targetProd=[
+  {br:'Kalimantan A',mat:'Nikel ORE',bln:'Juni 2026',target:'45.000'},
+  {br:'Kalimantan A',mat:'Nikel OB',bln:'Juni 2026',target:'80.000'},
+  {br:'Kalimantan B',mat:'Nikel ORE',bln:'Juni 2026',target:'22.000'},
+];
+document.getElementById('targetProdBody').innerHTML=targetProd.map(r=>
+  '<tr><td class="muted">'+r.br+'</td><td><span class="badge badge-manual" style="font-size:10px">'+r.mat+'</span></td><td class="muted">'+r.bln+'</td><td class="tnum"><strong>'+r.target+' ton</strong></td><td><button class="btn btn-ghost btn-sm">✏</button></td></tr>'
+).join('');
+
+// Budget BBM
+const budgetBbm=[
+  {tipe:'DT Kecil',lton:0.30,ljam:20.0,kmL:3.0,dari:'01 Jan 2026'},
+  {tipe:'DT Besar',lton:0.28,ljam:18.0,kmL:3.2,dari:'01 Jan 2026'},
+];
+document.getElementById('budgetBbmBody').innerHTML=budgetBbm.map(r=>
+  '<tr><td><span class="tag">'+r.tipe+'</span></td><td class="tnum">'+r.lton+'</td><td class="tnum">'+r.ljam+'</td><td class="tnum">'+r.kmL+'</td><td class="muted">'+r.dari+'</td><td><button class="btn btn-ghost btn-sm">✏</button></td></tr>'
+).join('');
+
+// Target revenue
+const targetRev=[
+  {br:'Kalimantan A',bln:'Juni 2026',target:'Rp 2.025.000.000',ket:'Target Q2 2026'},
+  {br:'Kalimantan B',bln:'Juni 2026',target:'Rp 1.056.000.000',ket:'Target Q2 2026'},
+];
+document.getElementById('targetRevBody').innerHTML=targetRev.map(r=>
+  '<tr><td class="muted">'+r.br+'</td><td class="muted">'+r.bln+'</td><td class="tnum"><strong>'+r.target+'</strong></td><td class="muted" style="font-size:11px">'+r.ket+'</td><td><button class="btn btn-ghost btn-sm">✏</button></td></tr>'
+).join('');
+
+// ─── STATUS OPERATION ──────────────────────────────────────────────
+const statusOpData = [
+  { code:'UTI',  name:'Unit Trip Indikator',  group:'UTILISASI',    color:'#22C55E', pa:true, ua:true,  prod:true  },
+  { code:'RFU',  name:'Ready For Use',         group:'READY FOR USE',color:'#F97316', pa:true, ua:false, prod:false },
+  { code:'BD',   name:'Breakdown',             group:'BREAKDOWN',    color:'#EF4444', pa:false,ua:false, prod:false },
+  { code:'C',    name:'Complete / Done',       group:'LAINNYA',      color:'#6B7280', pa:false,ua:false, prod:false },
+  { code:'PA',   name:'Preventive Act',        group:'PREVENTIVE',   color:'#FACC15', pa:false,ua:false, prod:false },
+  { code:'UA',   name:'Under Adjustment',      group:'ADJUSTMENT',   color:'#3B82F6', pa:false,ua:false, prod:false },
+  { code:'STBY', name:'Standby',               group:'STANDBY',      color:'#94A3B8', pa:false,ua:false, prod:false },
+  { code:'PM',   name:'Preventive Maintenance',group:'BREAKDOWN',    color:'#A855F7', pa:false,ua:false, prod:false },
+];
+// populate group filter
+const sopGroups = [...new Set(statusOpData.map(s=>s.group))];
+const sopGroupSel = document.getElementById('statusOpGroupFilter');
+sopGroups.forEach(g=>{ sopGroupSel.innerHTML+='<option value="'+g+'">'+g+'</option>'; });
+function renderStatusOp(){
+  const q = (document.getElementById('statusOpSearch').value||'').toLowerCase();
+  const g = document.getElementById('statusOpGroupFilter').value;
+  let filtered = statusOpData;
+  if(q) filtered = filtered.filter(s=>s.code.toLowerCase().includes(q)||s.name.toLowerCase().includes(q));
+  if(g) filtered = filtered.filter(s=>s.group===g);
+  const tbody = document.getElementById('statusOpBody');
+  tbody.innerHTML = filtered.map(s=>
+    '<tr>'+
+    '<td><span class="tag" style="font-family:monospace;background:'+s.color+'20;color:'+s.color+';border-color:'+s.color+'40">'+s.code+'</span></td>'+
+    '<td><strong>'+s.name+'</strong></td>'+
+    '<td class="muted">'+s.group+'</td>'+
+    '<td><span style="display:inline-block;width:24px;height:24px;border-radius:4px;background:'+s.color+';border:1px solid rgba(0,0,0,.1);vertical-align:middle"></span> <span class="muted" style="font-family:monospace;font-size:11px">'+s.color+'</span></td>'+
+    '<td><span class="badge badge-'+(s.pa?'approved':'rejected')+'">'+(s.pa?'Ya':'Tidak')+'</span></td>'+
+    '<td><span class="badge badge-'+(s.ua?'approved':'rejected')+'">'+(s.ua?'Ya':'Tidak')+'</span></td>'+
+    '<td><span class="badge badge-'+(s.prod?'approved':'rejected')+'">'+(s.prod?'Ya':'Tidak')+'</span></td>'+
+    '<td><span class="badge badge-approved">Aktif</span></td>'+
+    '<td><button class="btn btn-ghost btn-sm" onclick="editStatusOp(\''+s.code+'\')">✏</button></td>'+
+    '</tr>'
+  ).join('');
+}
+function editStatusOp(code){
+  const s = statusOpData.find(x=>x.code===code);
+  if(!s) return;
+  document.getElementById('sopCode').value = s.code;
+  document.getElementById('sopName').value = s.name;
+  document.getElementById('sopGroup').value = s.group;
+  document.getElementById('sopColor').value = s.color;
+  document.getElementById('sopColorHex').value = s.color;
+  document.getElementById('sopIsPA').checked = s.pa;
+  document.getElementById('sopIsUA').checked = s.ua;
+  document.getElementById('sopIsProd').checked = s.prod;
+  openModal('addStatusOpModal');
+}
+function saveStatusOp(){
+  closeModal('addStatusOpModal');
+  showToast('Status Operation berhasil disimpan','success');
+  renderStatusOp();
+}
+// color sync
+document.getElementById('sopColor').addEventListener('input',function(){document.getElementById('sopColorHex').value=this.value;});
+document.addEventListener('DOMContentLoaded', renderStatusOp);
+
+const masterTabKeys=['units','tipe_unit','operators','lokasi','material','rate','netto','delay','status_op','budget'];
+const masterTabLabels={
+  units:'Unit DT',tipe_unit:'Tipe Unit',operators:'Operator',
+  lokasi:'Pit & Stockpile',material:'Material',rate:'Hauling Rate',
+  netto:'Netto Estimasi',delay:'Delay Types',status_op:'Status Operation',budget:'Budget & Target'
+};
+function switchMaster(tab){
+  // Hide all tab content panels
+  masterTabKeys.forEach(t=>{
+    const el=document.getElementById('tab-'+t);
+    if(el) el.style.display=t===tab?'block':'none';
+  });
+  // Update active state using data-tab attribute (more reliable)
+  document.querySelectorAll('#masterTabs .tab').forEach(el=>{
+    const isActive=el.getAttribute('data-tab')===tab;
+    el.classList.toggle('active',isActive);
+  });
+  // Update hint label
+  const hint=document.getElementById('activeTabName');
+  if(hint) hint.textContent=masterTabLabels[tab]||tab;
+  // Scroll active tab into view
+  const activeTab=document.querySelector('#masterTabs .tab.active');
+  if(activeTab) activeTab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+}
+</script>
+</body>
+</html>

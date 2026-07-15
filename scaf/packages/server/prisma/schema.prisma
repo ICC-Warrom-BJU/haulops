@@ -1,0 +1,696 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // directUrl diperlukan oleh Supabase agar `prisma migrate deploy` bekerja
+  // dengan koneksi langsung (bukan lewat Transaction Pooler/PgBouncer)
+  directUrl = env("DIRECT_URL")
+}
+
+model Branch {
+  id             String   @id @default(uuid())
+  kode           String   @unique
+  nama           String
+  skemaTimbangan String   @default("WITH_TIMBANGAN")
+  aktif          Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  units                 Unit[]
+  operators             Operator[]
+  shifts                Shift[]
+  users                 User[]
+  lokasiPits            LokasiPit[]
+  lokasiStockpiles      LokasiStockpile[]
+  fuelStations          FuelStation[]
+  rates                 Rate[]
+  nettoEstimasi         NettoEstimasi[]
+  targetMaterialBulanan TargetMaterialBulanan[]
+  targetProduksiBranch  TargetProduksiBranch[]
+  targetRevenue         TargetRevenue[]
+  targetAvailability    TargetAvailabilityBranch[]
+  basisTargetProduksi   BasisTargetProduksi[]
+}
+
+model FuelStation {
+  id        String   @id @default(uuid())
+  kode      String?
+  nama      String
+  branchId  String?
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch  Branch?  @relation(fields: [branchId], references: [id], onDelete: NoAction)
+  bbmLogs BBMLog[]
+}
+
+model FuelType {
+  id        String   @id @default(uuid())
+  kode      String?
+  nama      String   @unique
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bbmLogs BBMLog[]
+}
+
+model ShiftType {
+  id         String   @id @default(uuid())
+  kode       String   @unique
+  nama       String
+  jamMulai   String
+  jamSelesai String
+  aktif      Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model TipeUnit {
+  id                 String   @id @default(uuid())
+  kode               String   @unique
+  nama               String
+  kapasitasTon       Float
+  budgetBreakdownJam Float?
+  budgetLton         Float?
+  budgetLjam         Float?
+  budgetKmL          Float?
+  targetRevenue      Float?
+  aktif              Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  units                 Unit[]
+  rates                 Rate[]
+  nettoEstimasi         NettoEstimasi[]
+  budgetMaterialTargets BudgetMaterialTarget[]
+  budgetRatioBbm        BudgetRatioBbm[]
+  targetRevenueTipeUnit TargetRevenueTipeUnit[]
+  basisTargetProduksi   BasisTargetProduksi[]
+}
+
+model Unit {
+  id                 String   @id @default(uuid())
+  kode               String   @unique
+  polisi             String?
+  noRangka           String?
+  noMesin            String?
+  tahun              Int?
+  kapasitas          Float?
+  tipeId             String
+  branchId           String
+  budgetBreakdownJam Float    @default(3)
+  status             String   @default("ready")
+  aktif              Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  tipe             TipeUnit              @relation(fields: [tipeId], references: [id])
+  branch           Branch                @relation(fields: [branchId], references: [id])
+  shiftUnits       ShiftUnit[]
+  rits             Rit[]
+  delays           Delay[]
+  maintenances     Maintenance[]
+  bbmLogs          BBMLog[]
+  actualStatuses   ActualStatus[]
+  budgetBreakdowns BudgetBreakdownUnit[]
+}
+
+model Operator {
+  id                    String    @id @default(uuid())
+  nama                  String
+  nik                   String    @unique
+  nid                   String?
+  telepon               String?
+  sim                   String?
+  simJenis              String?
+  simMasaBerlaku        DateTime?
+  tglLahir              DateTime?
+  tglBergabung          DateTime?
+  kontakDarurat         String?
+  kontakDaruratNama     String?
+  kontakDaruratHubungan String?
+  kontakDaruratTelepon  String?
+  branchId              String
+  aktif                 Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  branch        Branch                @relation(fields: [branchId], references: [id])
+  shiftUnits    ShiftUnit[]
+  rits          Rit[]
+  dailyStatuses OperatorDailyStatus[]
+}
+
+// Referensi/dokumentasi modul x role — BUKAN mesin enforcement. Akses sesungguhnya
+// masih dikontrol lewat requireRole() hardcode di tiap route. Tabel ini hanya
+// menyimpan gambaran "role apa saja yang boleh mengakses modul apa" untuk dilihat
+// admin; mengubah baris di sini tidak mengubah perilaku sistem yang sebenarnya.
+model ModulePermission {
+  id           String   @id @default(uuid())
+  moduleKode   String   @unique
+  moduleNama   String
+  deskripsi    String?
+  rolesAllowed String[]
+  aktif        Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Katalog status kesiapan operator (Ready/Sakit/Izin/dst) — domain terpisah dari
+// StatusOperation (yang untuk ketersediaan Unit/alat, punya flag isPA/isUA/isProd
+// yang tidak relevan untuk manusia).
+model OperatorStatusType {
+  id        String   @id @default(uuid())
+  kode      String   @unique
+  nama      String
+  warna     String?
+  urutan    Int      @default(0)
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dailyStatuses OperatorDailyStatus[]
+}
+
+// Validasi harian kesiapan operator oleh koordinator — 1 baris per operator per
+// tanggal. Tanpa baris untuk (operator, tanggal) tertentu berarti "belum divalidasi".
+model OperatorDailyStatus {
+  id           String   @id @default(uuid())
+  operatorId   String
+  tanggal      String
+  statusTypeId String
+  catatan      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  operator   Operator           @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  statusType OperatorStatusType @relation(fields: [statusTypeId], references: [id])
+
+  @@unique([operatorId, tanggal])
+}
+
+model Material {
+  id                    String   @id @default(uuid())
+  nama                  String   @unique
+  kode                  String   @unique
+  kategori              String?
+  satuan                String   @default("ton")
+  targetProduksiBulanan Float?
+  aktif                 Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  rates                 Rate[]
+  nettoEstimasi         NettoEstimasi[]
+  budgetTargets         BudgetMaterialTarget[]
+  targetMaterialBulanan TargetMaterialBulanan[]
+  basisTargetProduksi   BasisTargetProduksi[]
+}
+
+model LokasiPit {
+  id              String   @id @default(uuid())
+  nama            String
+  kodeArea        String?
+  branchId        String?
+  materialDominan String?
+  jarakKeROM      Float?
+  aktif           Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  branch    Branch?                @relation(fields: [branchId], references: [id])
+  rits      Rit[]
+  distances PitStockpileDistance[]
+}
+
+model LokasiStockpile {
+  id           String   @id @default(uuid())
+  nama         String
+  kode         String?
+  branchId     String?
+  kapasitasTon Float?
+  aktif        Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  branch    Branch?                @relation(fields: [branchId], references: [id])
+  rits      Rit[]
+  distances PitStockpileDistance[]
+}
+
+model PitStockpileDistance {
+  id          String   @id @default(uuid())
+  pitId       String
+  stockpileId String
+  jarakKm     Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pit       LokasiPit       @relation(fields: [pitId], references: [id], onDelete: Cascade)
+  stockpile LokasiStockpile @relation(fields: [stockpileId], references: [id], onDelete: Cascade)
+
+  @@unique([pitId, stockpileId])
+}
+
+model DelayBudget {
+  id          String   @id @default(uuid())
+  delayTypeId String
+  bulan       String
+  budgetMenit Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  delayType DelayType @relation(fields: [delayTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([delayTypeId, bulan])
+}
+
+model Rate {
+  id            String    @id @default(uuid())
+  branchId      String
+  tipeUnitId    String
+  materialId    String
+  pitId         String?
+  stockpileId   String?
+  rateRpPerTon  Float
+  berlakuDari   DateTime
+  berlakuSampai DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  branch   Branch   @relation(fields: [branchId], references: [id])
+  tipeUnit TipeUnit @relation(fields: [tipeUnitId], references: [id])
+  material Material @relation(fields: [materialId], references: [id])
+}
+
+// Input dasar (versioned) untuk menurunkan Target Produksi harian:
+// Produksi Plan = ewhPerUnitJam × jumlahUnitPlan × produktivitasTonPerJam.
+// Di-scope per branch+tipeUnit+material; berlaku sejak berlakuDari s/d berlakuSampai
+// (null = masih berlaku). Meniru pola Rate — histori tak ditimpa, banyak versi diizinkan.
+model BasisTargetProduksi {
+  id                     String    @id @default(uuid())
+  branchId               String
+  tipeUnitId             String
+  materialId             String
+  ewhPerUnitJam          Float
+  jumlahUnitPlan         Int
+  produktivitasTonPerJam Float
+  berlakuDari            DateTime
+  berlakuSampai          DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  branch   Branch   @relation(fields: [branchId], references: [id])
+  tipeUnit TipeUnit @relation(fields: [tipeUnitId], references: [id])
+  material Material @relation(fields: [materialId], references: [id])
+}
+
+model NettoEstimasi {
+  id               String   @id @default(uuid())
+  branchId         String
+  tipeUnitId       String
+  materialId       String
+  nettoEstimasiTon Float
+  faktorMuatan     Float
+  berlakuDari      DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  branch   Branch   @relation(fields: [branchId], references: [id])
+  tipeUnit TipeUnit @relation(fields: [tipeUnitId], references: [id])
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@unique([branchId, tipeUnitId, materialId])
+}
+
+model DelayType {
+  id          String   @id @default(uuid())
+  kode        String   @unique
+  nama        String
+  kategori    String
+  scope       String   @default("UNIT")
+  budgetMenit Int?
+  kenaPA      Boolean  @default(true)
+  aktif       Boolean  @default(true)
+  urutan      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  delays  Delay[]
+  budgets DelayBudget[]
+}
+
+model StatusOperation {
+  id        String   @id @default(uuid())
+  kode      String   @unique
+  nama      String
+  group     String?
+  warna     String?
+  isPA      Boolean  @default(false)
+  isUA      Boolean  @default(false)
+  isProd    Boolean  @default(false)
+  urutan    Int      @default(0)
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  actualStatuses ActualStatus[]
+}
+
+model Shift {
+  id           String    @id @default(uuid())
+  tanggal      String
+  tipe         String
+  jamMulai     String
+  jamSelesai   String
+  branchId     String
+  catatan      String?
+  status       String    @default("open")
+  closedAt     DateTime?
+  closedById   String?
+  approvedAt   DateTime?
+  approvedById String?
+  rejectReason String?
+  ritase       Int       @default(0)
+  tonase       Float     @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  branch       Branch        @relation(fields: [branchId], references: [id])
+  closedBy     User?         @relation("closedBy", fields: [closedById], references: [id], onDelete: NoAction)
+  approvedBy   User?         @relation("approvedBy", fields: [approvedById], references: [id], onDelete: NoAction)
+  units        ShiftUnit[]
+  rits         Rit[]
+  delays       Delay[]
+  maintenances Maintenance[]
+  bbmLogs      BBMLog[]
+  approvals    Approval[]
+}
+
+model ShiftUnit {
+  id         String   @id @default(uuid())
+  shiftId    String
+  unitId     String
+  operatorId String?
+  material   String?
+  statusAwal String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  shift    Shift     @relation(fields: [shiftId], references: [id])
+  unit     Unit      @relation(fields: [unitId], references: [id])
+  operator Operator? @relation(fields: [operatorId], references: [id], onDelete: NoAction)
+
+  @@unique([shiftId, unitId])
+}
+
+model Rit {
+  id              String   @id @default(uuid())
+  noRit           String   @unique
+  shiftId         String
+  unitId          String
+  operatorId      String?
+  pitId           String?
+  stockpileId     String?
+  material        String
+  jumlahRit       Int
+  jarakKm         Float?
+  grossKg         Float?
+  tareKg          Float?
+  nettoTon        Float?
+  statusTimbangan String   @default("manual")
+  estimasiTon     Float?
+  catatan         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shift     Shift            @relation(fields: [shiftId], references: [id])
+  unit      Unit             @relation(fields: [unitId], references: [id])
+  operator  Operator?        @relation(fields: [operatorId], references: [id], onDelete: NoAction)
+  pit       LokasiPit?       @relation(fields: [pitId], references: [id], onDelete: NoAction)
+  stockpile LokasiStockpile? @relation(fields: [stockpileId], references: [id], onDelete: NoAction)
+}
+
+model Delay {
+  id          String    @id @default(uuid())
+  shiftId     String
+  delayTypeId String
+  scope       String    @default("UNIT")
+  unitId      String?
+  jamMulai    DateTime
+  jamSelesai  DateTime?
+  durasiMenit Int
+  keterangan  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  shift     Shift     @relation(fields: [shiftId], references: [id])
+  delayType DelayType @relation(fields: [delayTypeId], references: [id])
+  unit      Unit?     @relation(fields: [unitId], references: [id], onDelete: NoAction)
+}
+
+model Maintenance {
+  id          String    @id @default(uuid())
+  shiftId     String
+  unitId      String
+  jenis       String
+  status      String
+  jamMulai    DateTime
+  jamSelesai  DateTime?
+  durasiJam   Float     @default(0)
+  budgetJam   Float     @default(3)
+  keterangan  String?
+  partDiganti String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  shift Shift @relation(fields: [shiftId], references: [id])
+  unit  Unit  @relation(fields: [unitId], references: [id])
+
+  @@unique([shiftId, unitId])
+}
+
+model BBMLog {
+  id            String   @id @default(uuid())
+  shiftId       String
+  unitId        String
+  operatorBbmId String
+  fuelStationId String?
+  fuelTypeId    String?
+  jamPengisian  DateTime
+  lokasi        String?
+  liter         Float
+  odoKm         Float?
+  hm            Float?
+  keterangan    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  shift       Shift        @relation(fields: [shiftId], references: [id])
+  unit        Unit         @relation(fields: [unitId], references: [id])
+  operatorBbm User         @relation("operatorBbm", fields: [operatorBbmId], references: [id])
+  fuelStation FuelStation? @relation(fields: [fuelStationId], references: [id], onDelete: NoAction)
+  fuelType    FuelType?    @relation(fields: [fuelTypeId], references: [id], onDelete: NoAction)
+}
+
+model ActualStatus {
+  id         String   @id @default(uuid())
+  unitId     String
+  tanggal    String
+  statusOpId String
+  catatan    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  unit     Unit            @relation(fields: [unitId], references: [id])
+  statusOp StatusOperation @relation(fields: [statusOpId], references: [id])
+
+  @@unique([unitId, tanggal])
+}
+
+model Approval {
+  id        String   @id @default(uuid())
+  shiftId   String
+  tipe      String
+  aksi      String
+  catatan   String?
+  userId    String
+  createdAt DateTime @default(now())
+
+  shift Shift @relation(fields: [shiftId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+}
+
+model EditRequest {
+  id            String    @id @default(uuid())
+  tipe          String
+  recordId      String
+  field         String
+  nilaiLama     String
+  nilaiBaru     String
+  alasan        String
+  dibuatById    String
+  status        String    @default("pending")
+  reviewedById  String?
+  catatanReview String?
+  createdAt     DateTime  @default(now())
+  reviewedAt    DateTime?
+
+  dibuatBy   User  @relation("dibuatBy", fields: [dibuatById], references: [id])
+  reviewedBy User? @relation("reviewedBy", fields: [reviewedById], references: [id], onDelete: NoAction)
+}
+
+model BudgetMaterialTarget {
+  id           String   @id @default(uuid())
+  tipeUnitId   String
+  materialId   String
+  bulan        String
+  tahun        Int
+  targetRitase Int?
+  targetTon    Float
+  targetEWH    Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tipeUnit TipeUnit @relation(fields: [tipeUnitId], references: [id])
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@unique([tipeUnitId, materialId, bulan, tahun])
+}
+
+// #6 + #7: Target ritase & tonase per material, per branch, per bulan/tahun.
+model TargetMaterialBulanan {
+  id           String   @id @default(uuid())
+  branchId     String
+  materialId   String
+  bulan        String
+  tahun        Int
+  targetRitase Int?
+  targetTon    Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  branch   Branch   @relation(fields: [branchId], references: [id])
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@unique([branchId, materialId, bulan, tahun])
+}
+
+// #1: Budget breakdown (downtime) maksimal per unit, satuan jam per hari.
+model BudgetBreakdownUnit {
+  id               String   @id @default(uuid())
+  unitId           String
+  bulan            String
+  tahun            Int
+  budgetJamPerHari Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([unitId, bulan, tahun])
+}
+
+// #2: Target produksi (tonase) total per branch, per bulan/tahun.
+model TargetProduksiBranch {
+  id        String   @id @default(uuid())
+  branchId  String
+  bulan     String
+  tahun     Int
+  targetTon Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([branchId, bulan, tahun])
+}
+
+// Target PA%/UA% per branch per bulan — dibandingkan ke PA/UA aktual (dihitung dari
+// jam terjadwal, breakdown, delay) di Dashboard Monitoring Harian.
+model TargetAvailabilityBranch {
+  id          String   @id @default(uuid())
+  branchId    String
+  bulan       String
+  tahun       Int
+  targetPaPct Float
+  targetUaPct Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([branchId, bulan, tahun])
+}
+
+// #3: Budget rasio BBM per tipe unit, satuan liter per km, per bulan/tahun.
+model BudgetRatioBbm {
+  id          String   @id @default(uuid())
+  tipeUnitId  String
+  bulan       String
+  tahun       Int
+  ratioLPerKm Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tipeUnit TipeUnit @relation(fields: [tipeUnitId], references: [id], onDelete: Cascade)
+
+  @@unique([tipeUnitId, bulan, tahun])
+}
+
+// #5: Target revenue per tipe unit, per bulan/tahun.
+model TargetRevenueTipeUnit {
+  id         String   @id @default(uuid())
+  tipeUnitId String
+  bulan      String
+  tahun      Int
+  targetRp   Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tipeUnit TipeUnit @relation(fields: [tipeUnitId], references: [id], onDelete: Cascade)
+
+  @@unique([tipeUnitId, bulan, tahun])
+}
+
+model TargetRevenue {
+  id         String   @id @default(uuid())
+  branchId   String
+  bulan      String
+  tahun      Int
+  targetRp   Float
+  keterangan String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([branchId, bulan, tahun])
+}
+
+model User {
+  id          String    @id @default(uuid())
+  email       String?
+  username    String    @unique
+  password    String
+  nama        String
+  role        String    @default("operator")
+  branchId    String?
+  avatarUrl   String?
+  aktif       Boolean   @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  branch               Branch?       @relation(fields: [branchId], references: [id], onDelete: NoAction)
+  shiftsClosed         Shift[]       @relation("closedBy")
+  shiftsApproved       Shift[]       @relation("approvedBy")
+  bbmLogs              BBMLog[]      @relation("operatorBbm")
+  approvals            Approval[]
+  editRequestsDibuat   EditRequest[] @relation("dibuatBy")
+  editRequestsDitinjau EditRequest[] @relation("reviewedBy")
+}

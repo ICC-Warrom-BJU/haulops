@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan — Hauling Monitor</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="main-wrapper">
+  <div id="topbarContainer"></div>
+  <main class="page-content">
+    <div class="page-header">
+      <div class="page-header-left"><h1>Laporan</h1><p>Analitik operasional harian, bulanan, dan per unit</p></div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="showToast('Laporan diekspor ke Excel')">⬇ Export Excel</button>
+      </div>
+    </div>
+
+    <div class="tabs" id="laporanTabs">
+      <div class="tab active" onclick="switchLap('harian')" data-tab="harian" data-tab="harian">Daily Report</div>
+      <div class="tab" onclick="switchLap('delay')" data-tab="delay" data-tab="delay">Delay Summary</div>
+      <div class="tab" onclick="switchLap('bbm')" data-tab="bbm" data-tab="bbm">BBM Report</div>
+      <div class="tab" onclick="switchLap('maintenance')" data-tab="maintenance" data-tab="maintenance">Maintenance</div>
+      <div class="tab" onclick="switchLap('bulanan')" data-tab="bulanan" data-tab="bulanan">Rekap Bulanan</div>
+    </div>
+
+    <div class="toolbar mb-20">
+      <div class="toolbar-left">
+        <input type="date" class="filter-select" value="2026-06-07">
+        <select class="filter-select"><option>Semua Shift</option><option>Steady Day</option><option>Shift Pagi</option><option>Shift Siang</option><option>Shift Malam</option></select>
+        <select class="filter-select"><option>Semua Unit</option><option>DT-001</option><option>DT-002</option></select>
+        <select class="filter-select"><option>Semua Material</option><option>Coal</option><option>OB</option></select>
+      </div>
+    </div>
+
+    <div id="tab-harian">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Daily Report per Unit — 07 Juni 2026</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Unit</th><th>Operator</th><th>Ritase</th><th>Tonase</th><th>PA%</th><th>UA%</th><th>EWH (Jam)</th><th>Cycle Time</th><th>BBM (L)</th><th>Revenue</th></tr></thead>
+            <tbody id="dailyReportBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-delay" style="display:none">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Delay Summary vs Budget</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Jenis Delay</th><th>Kategori</th><th>Scope</th><th>Budget (mnt)</th><th>Realisasi (mnt)</th><th>Selisih</th><th>Status</th><th>Kena PA</th><th>Unit Terdampak</th></tr></thead>
+            <tbody id="delayReportBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-bbm" style="display:none">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Laporan BBM per Unit</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Unit</th><th>Tipe</th><th>Total Liter</th><th>Tonase</th><th>Jam/L</th><th>Status</th></tr></thead>
+            <tbody id="bbmReportBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-maintenance" style="display:none">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Laporan Downtime & Maintenance</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Unit</th><th>Jenis</th><th>Mulai</th><th>Selesai</th><th>Durasi (mnt)</th><th>% dari Shift</th><th>Keterangan</th></tr></thead>
+            <tbody id="maintReportBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-bulanan" style="display:none">
+      <div id="bulananKpi" class="grid-4 mb-20"></div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Trend Harian — Juni 2026</span></div>
+        <div class="card-body">
+          <div id="bulananChart" class="chart-area" style="height:160px"></div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);padding-top:8px">
+            <span>1 Jun</span><span>7</span><span>14</span><span>21</span><span>28</span><span>30 Jun</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+document.getElementById('sidebarContainer').innerHTML = renderSidebar('laporan');
+document.getElementById('topbarContainer').innerHTML = renderTopbar('Laporan & Analitik');
+
+// Daily report
+// EWH = Jam tersedia - Total Jam Delay - Total Jam Maintenance
+// Cycle Time = EWH / Jumlah Rit (jam/rit)
+const dailyData = [
+  {u:'DT-001',op:'Budi S.',rit:18,ton:342,pa:97,ua:82,ewh:6.2,bbm:88,rev:'15.4 M'},
+  {u:'DT-002',op:'Agus P.',rit:21,ton:399,pa:99,ua:88,ewh:7.0,bbm:82,rev:'17.9 M'},
+  {u:'DT-003',op:'Hendra K.',rit:16,ton:304,pa:95,ua:76,ewh:5.8,bbm:92,rev:'13.7 M'},
+  {u:'DT-004',op:'Rudi W.',rit:8,ton:152,pa:52,ua:45,ewh:3.2,bbm:145,rev:'6.8 M'},
+  {u:'DT-005',op:'Slamet D.',rit:19,ton:361,pa:98,ua:84,ewh:6.8,bbm:85,rev:'16.2 M'},
+  {u:'DT-006',op:'Yusuf A.',rit:22,ton:418,pa:99,ua:91,ewh:7.5,bbm:78,rev:'18.8 M'},
+  {u:'DT-007',op:'Bambang R.',rit:0,ton:0,pa:50,ua:0,ewh:0,bbm:0,rev:'—'},
+  {u:'DT-008',op:'Dedi S.',rit:20,ton:380,pa:98,ua:86,ewh:6.5,bbm:83,rev:'17.1 M'},
+];
+const jamTersedia = 8; // default shift hours
+const clr = (v, t1, t2) => v >= t1 ? '#16A34A' : v >= t2 ? '#CA8A04' : '#DC2626';
+const ewhClr = ewh => ewh >= jamTersedia ? '#16A34A' : ewh >= jamTersedia * 0.5 ? '#CA8A04' : '#DC2626';
+function cycleTime(ewh, rit) { return (ewh > 0 && rit > 0) ? (ewh / rit).toFixed(2) + ' j/rit' : '—'; }
+document.getElementById('dailyReportBody').innerHTML = dailyData.map(r =>
+  '<tr>' +
+  '<td><span class="tag">' + r.u + '</span></td>' +
+  '<td class="muted" style="font-size:12px">' + r.op + '</td>' +
+  '<td class="tnum">' + r.rit + '</td>' +
+  '<td class="tnum"><strong>' + r.ton + '</strong></td>' +
+  '<td class="tnum" style="color:' + clr(r.pa,90,75) + '">' + r.pa + '%</td>' +
+  '<td class="tnum" style="color:' + clr(r.ua,80,65) + '">' + r.ua + '%</td>' +
+  '<td class="tnum"><strong style="color:' + ewhClr(r.ewh) + '">' + r.ewh.toFixed(1) + ' j</strong></td>' +
+  '<td class="tnum">' + cycleTime(r.ewh, r.rit) + '</td>' +
+  '<td class="tnum">' + (r.bbm > 0 ? r.bbm + ' L' : '—') + '</td>' +
+  '<td class="tnum" style="font-size:12px">' + r.rev + '</td>' +
+  '</tr>'
+).join('') +
+'<tr style="background:var(--cream-deep);font-weight:700">' +
+'<td colspan="2">TOTAL / AVG</td>' +
+'<td class="tnum">124</td><td class="tnum">2.356</td>' +
+'<td class="tnum" style="color:#16A34A">84%</td><td class="tnum" style="color:#CA8A04">72%</td>' +
+'<td class="tnum"><strong style="color:' + ewhClr(5.375) + '">43.0 j</strong></td><td class="tnum">0.35 j/rit</td><td class="tnum">653 L</td><td class="tnum">105.9 M</td>' +
+'</tr>';
+
+// Delay report
+const delayReport = [
+  {n:'Hujan',kat:'Cuaca',sc:'Fleet',b:60,r:80,kena:'Ya'},
+  {n:'Buka Tutup Pit',kat:'Operasional',sc:'Fleet',b:30,r:25,kena:'Ya'},
+  {n:'Safety Talk',kat:'Administrasi',sc:'Fleet',b:30,r:28,kena:'Tidak'},
+  {n:'Apel / Briefing',kat:'Administrasi',sc:'Fleet',b:20,r:20,kena:'Tidak'},
+  {n:'Ganti Ban',kat:'Mekanik',sc:'Unit',b:60,r:90,kena:'Ya'},
+  {n:'Pengisian BBM',kat:'Operasional',sc:'Unit',b:20,r:18,kena:'Ya'},
+  {n:'Menunggu Loader',kat:'Operasional',sc:'Unit',b:20,r:35,kena:'Ya'},
+];
+document.getElementById('delayReportBody').innerHTML = delayReport.map(d => {
+  const over = d.r > d.b; const sel = d.r - d.b;
+  return '<tr>' +
+    '<td><strong>' + d.n + '</strong></td>' +
+    '<td class="muted">' + d.kat + '</td>' +
+    '<td><span class="badge badge-' + (d.sc==='Fleet'?'fleet':'unit') + '">' + d.sc + '</span></td>' +
+    '<td class="tnum">' + d.b + '</td>' +
+    '<td class="tnum"><strong>' + d.r + '</strong></td>' +
+    '<td class="tnum ' + (over?'text-danger':'text-success') + '">' + (over?'+':'') + sel + '</td>' +
+    '<td><span class="badge badge-' + (over?'over':'ok') + '">' + (over?'Over Budget':'OK') + '</span></td>' +
+    '<td class="muted">' + d.kena + '</td>' +
+    '<td class="tnum">' + (d.sc==='Fleet'?14:1) + '</td>' +
+    '</tr>';
+}).join('');
+
+// BBM report
+const bbmReport = [
+  {u:'DT-001',t:'DT Kecil',l:88,ton:342,jl:0.057},
+  {u:'DT-002',t:'DT Kecil',l:82,ton:399,jl:0.054},
+  {u:'DT-003',t:'DT Kecil',l:92,ton:304,jl:0.061},
+  {u:'DT-004',t:'DT Besar',l:145,ton:152,jl:0.097},
+  {u:'DT-005',t:'DT Kecil',l:85,ton:361,jl:0.056},
+  {u:'DT-006',t:'DT Kecil',l:78,ton:418,jl:0.051},
+];
+document.getElementById('bbmReportBody').innerHTML = bbmReport.map(r =>
+  '<tr>' +
+  '<td><span class="tag">' + r.u + '</span></td>' +
+  '<td class="muted">' + r.t + '</td>' +
+  '<td class="tnum"><strong>' + r.l + ' L</strong></td>' +
+  '<td class="tnum">' + r.ton + ' ton</td>' +
+  '<td class="tnum" style="color:' + (r.jl>0.060?'#DC2626':r.jl>0.055?'#CA8A04':'#16A34A') + ';font-weight:600">' + r.jl.toFixed(3) + '</td>' +
+  '<td><span class="badge ' + (r.jl>0.060?'badge-over':r.jl>0.055?'badge-pending':'badge-ok') + '">' + (r.jl>0.060?'Tinggi':r.jl>0.055?'Normal':'Efisien') + '</span></td>' +
+  '</tr>'
+).join('');
+
+// Maintenance report
+const maintReport = [
+  {u:'DT-004',j:'Breakdown',s:'09:00',e:'—',d:180,pct:'37.5%',ket:'Hydraulic bocor'},
+  {u:'DT-007',j:'PM',s:'06:00',e:'07:30',d:90,pct:'18.75%',ket:'Service 250 HM'},
+];
+document.getElementById('maintReportBody').innerHTML = maintReport.map(r =>
+  '<tr>' +
+  '<td><span class="tag">' + r.u + '</span></td>' +
+  '<td><span class="badge ' + (r.j==='Breakdown'?'badge-rejected':'badge-pending') + '">' + r.j + '</span></td>' +
+  '<td class="muted tnum">' + r.s + '</td>' +
+  '<td class="muted tnum">' + r.e + '</td>' +
+  '<td class="tnum"><strong>' + r.d + '</strong></td>' +
+  '<td class="tnum text-danger">' + r.pct + '</td>' +
+  '<td class="muted" style="font-size:12px">' + r.ket + '</td>' +
+  '</tr>'
+).join('');
+
+// Bulanan KPI
+const bulKpi = [{l:'Total Ritase',v:'8.940'},{l:'Total Tonase',v:'169.860 ton'},{l:'Avg PA',v:'89.2%'},{l:'Total Revenue',v:'Rp 7.64 M'}];
+document.getElementById('bulananKpi').innerHTML = bulKpi.map(k =>
+  '<div class="stat-card"><div class="stat-label">' + k.l + '</div><div class="stat-value" style="font-size:22px">' + k.v + '</div></div>'
+).join('');
+
+// Chart bars
+const chartVals = [62,68,71,65,74,78,72,80,76,68,74,79,83,72,77,82,85,80,76,71,75,82,84,79,72,75,80,84,78,72];
+document.getElementById('bulananChart').innerHTML = chartVals.map((h, i) =>
+  '<div class="chart-bar" style="height:' + h + '%;background:' + (i===6?'linear-gradient(180deg,var(--gold),var(--amber))':'var(--sand)') + '"></div>'
+).join('');
+
+function switchLap(tab) {
+  ['harian','delay','bbm','maintenance','bulanan'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if(el) el.style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('#laporanTabs .tab').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('data-tab') === tab);
+  });
+}
+</script>
+</body>
+</html>

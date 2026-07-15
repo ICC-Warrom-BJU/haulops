@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Hauling Monitor</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="main-wrapper">
+  <div id="topbarContainer"></div>
+  <main class="page-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Dashboard</h1>
+        <p>Senin, 07 Juni 2026 · Shift Pagi sedang berjalan · 4 jam 32 menit</p>
+      </div>
+      <div class="page-header-actions">
+        <span class="badge badge-open" style="padding:6px 12px;font-size:12px">● Shift Pagi Aktif</span>
+        <button class="btn btn-gold" onclick="navigate('shift')">Lihat Detail Shift</button>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg)">
+      <span style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-right:4px">Periode:</span>
+      <button id="filterToday" style="background:var(--brown-dark);color:white;padding:5px 14px;font-size:12px;border-radius:var(--radius-sm);border:none;cursor:pointer" onclick="setFilter('today')">Today</button>
+      <button id="filterYesterday" style="background:var(--cream);color:var(--text-secondary);padding:5px 14px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer" onclick="setFilter('yesterday')">Yesterday</button>
+      <button id="filter3Days" style="background:var(--cream);color:var(--text-secondary);padding:5px 14px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer" onclick="setFilter('3days')">3 Days Ago</button>
+      <button id="filter7Days" style="background:var(--cream);color:var(--text-secondary);padding:5px 14px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer" onclick="setFilter('7days')">7 Days Ago</button>
+      <span style="color:var(--text-muted);font-size:12px">|</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="date" class="filter-select" id="filterDateStart" value="2026-06-01" style="font-size:11px;padding:4px 8px" onchange="setDateRange()">
+        <span style="font-size:11px;color:var(--text-muted)">—</span>
+        <input type="date" class="filter-select" id="filterDateEnd" value="2026-06-07" style="font-size:11px;padding:4px 8px" onchange="setDateRange()">
+        <span id="filterLabel" style="font-size:11px;color:var(--text-muted);margin-left:4px">(07 Jun 2026)</span>
+      </div>
+    </div>
+
+    <!-- KPI Row 1 -->
+    <div id="kpiRow1" class="stat-grid mb-20"></div>
+    <!-- KPI Row 2 -->
+    <div id="kpiRow2" class="stat-grid mb-20"></div>
+
+    <!-- Chart + Delay -->
+    <div class="grid-2 mb-20">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Tonase Harian — 7 Hari Terakhir</span>
+          <select class="filter-select" style="font-size:12px;padding:5px 8px"><option>7 Hari</option><option>30 Hari</option></select>
+        </div>
+        <div class="card-body">
+          <div id="chartArea" class="chart-area"></div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:10px;color:var(--text-muted)">
+            <span>01 Jun</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07 Jun</span>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:16px">
+            <div style="font-size:12px"><span style="color:var(--text-muted)">Avg 7 hari:</span> <strong>4.640 ton</strong></div>
+            <div style="font-size:12px"><span style="color:var(--text-muted)">Hari ini:</span> <strong style="color:var(--amber)">4.832 ton</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Delay Hari Ini vs Budget</span>
+          <button class="btn btn-ghost btn-sm" onclick="navigate('delay')">Lihat Semua</button>
+        </div>
+        <div class="card-body" id="delayBudget"></div>
+      </div>
+    </div>
+
+    <!-- Unit Status -->
+    <div class="card mb-20">
+      <div class="card-header">
+        <span class="card-title">Status Armada DT — Shift Pagi</span>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('maintenance')">Kelola Maintenance</button>
+      </div>
+      <div class="card-body">
+        <div id="unitGrid" class="grid-4" style="gap:12px"></div>
+      </div>
+    </div>
+
+    <!-- Alerts + Recent SJ -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><span class="card-title">⚠ Perlu Perhatian</span></div>
+        <div id="alertList" class="card-body" style="padding:0"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">SJ Terbaru</span>
+          <button class="btn btn-ghost btn-sm" onclick="navigate('rit_operation')">Lihat Semua</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>No SJ</th><th>Unit</th><th>Netto</th><th>Status</th></tr></thead>
+            <tbody id="recentSJ"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+document.getElementById('sidebarContainer').innerHTML = renderSidebar('dashboard');
+document.getElementById('topbarContainer').innerHTML = renderTopbar('Dashboard', 'Shift Pagi · 07 Jun 2026');
+
+// ── Filter Logic ──────────────────────────────────────────────────
+let activeFilter = 'today';
+
+function setFilter(mode) {
+  activeFilter = mode;
+  const today = new Date();
+  const fmt = d => d.toISOString().split('T')[0];
+  let start, end = fmt(today);
+  const label = document.getElementById('filterLabel');
+
+  // Reset button styles
+  ['filterToday','filterYesterday','filter3Days','filter7Days'].forEach(id => {
+    const btn = document.getElementById(id);
+    btn.style.background = 'var(--cream)';
+    btn.style.color = 'var(--text-secondary)';
+    btn.style.border = '1px solid var(--border)';
+  });
+
+  switch(mode) {
+    case 'today':
+      start = fmt(today);
+      document.getElementById('filterToday').style.background = 'var(--brown-dark)';
+      document.getElementById('filterToday').style.color = 'white';
+      document.getElementById('filterToday').style.border = 'none';
+      label.textContent = '(07 Jun 2026)';
+      break;
+    case 'yesterday': {
+      const d = new Date(today); d.setDate(d.getDate()-1);
+      start = fmt(d);
+      document.getElementById('filterYesterday').style.background = 'var(--brown-dark)';
+      document.getElementById('filterYesterday').style.color = 'white';
+      document.getElementById('filterYesterday').style.border = 'none';
+      label.textContent = '(06 Jun 2026)';
+      break;
+    }
+    case '3days': {
+      const d = new Date(today); d.setDate(d.getDate()-3);
+      start = fmt(d);
+      document.getElementById('filter3Days').style.background = 'var(--brown-dark)';
+      document.getElementById('filter3Days').style.color = 'white';
+      document.getElementById('filter3Days').style.border = 'none';
+      label.textContent = '(04–07 Jun 2026)';
+      break;
+    }
+    case '7days': {
+      const d = new Date(today); d.setDate(d.getDate()-7);
+      start = fmt(d);
+      document.getElementById('filter7Days').style.background = 'var(--brown-dark)';
+      document.getElementById('filter7Days').style.color = 'white';
+      document.getElementById('filter7Days').style.border = 'none';
+      label.textContent = '(01–07 Jun 2026)';
+      break;
+    }
+  }
+  document.getElementById('filterDateStart').value = start;
+  document.getElementById('filterDateEnd').value = end;
+  showToast('Filter: ' + mode + ' (' + start + ' — ' + end + ')');
+}
+
+function setDateRange() {
+  const s = document.getElementById('filterDateStart').value;
+  const e = document.getElementById('filterDateEnd').value;
+  if (!s || !e) return;
+  activeFilter = 'custom';
+  ['filterToday','filterYesterday','filter3Days','filter7Days'].forEach(id => {
+    const btn = document.getElementById(id);
+    btn.style.background = 'var(--cream)';
+    btn.style.color = 'var(--text-secondary)';
+    btn.style.border = '1px solid var(--border)';
+  });
+  document.getElementById('filterLabel').textContent = '(' + s + ' — ' + e + ')';
+  showToast('Filter: custom date range (' + s + ' — ' + e + ')');
+}
+
+// KPI Row 1
+const kpi1 = [
+  {label:'Total Ritase Hari Ini', value:'247', sub:'Trip', badge:'↑ 12 vs kemarin', badgeType:'up', icon:'📋', iconBg:'gold'},
+  {label:'Total Tonase', value:'4.832', unit:'ton', badge:'↑ 8.4%', badgeType:'up', icon:'⚖', iconBg:'brown'},
+  {label:'Estimasi Revenue', value:'Rp 217,4 M', sub:'3 SJ belum ada timbangan', icon:'💰', iconBg:'amber'},
+  {label:'Unit DT Aktif', value:'14', unit:'/ 16', sub:'2 unit breakdown / PM', icon:'🚛', iconBg:'green'},
+];
+document.getElementById('kpiRow1').innerHTML = kpi1.map(k =>
+  '<div class="stat-card ' + (k.iconBg==='gold'?'gold':'') + '">' +
+  '<div class="stat-icon ' + k.iconBg + '">' + k.icon + '</div>' +
+  '<div class="stat-label">' + k.label + '</div>' +
+  '<div class="stat-value">' + k.value + (k.unit ? ' <span style="font-size:16px;color:var(--text-muted)">' + k.unit + '</span>' : '') + '</div>' +
+  '<div class="stat-sub">' + (k.badge ? '<span class="stat-badge ' + k.badgeType + '">' + k.badge + '</span> ' : '') + (k.sub || '') + '</div>' +
+  '</div>'
+).join('');
+
+// KPI Row 2
+const kpi2 = [
+  {label:'Physical Avail. (PA)', value:'87.5%', color:'#16A34A', bar:'green', pct:87.5},
+  {label:'Use of Avail. (UA)', value:'74.2%', color:'var(--amber)', bar:'gold', pct:74.2},
+  {label:'Avg Cycle Time', value:'38 mnt', badge:'↑ 4 mnt vs normal', badgeType:'warn'},
+  {label:'Produktivitas', value:'82.4 t/jam', badge:'Target tercapai', badgeType:'up'},
+];
+document.getElementById('kpiRow2').innerHTML = kpi2.map(k =>
+  '<div class="stat-card">' +
+  '<div class="stat-label">' + k.label + '</div>' +
+  '<div class="stat-value" style="' + (k.color ? 'color:' + k.color : '') + '">' + k.value + '</div>' +
+  (k.pct !== undefined ? '<div class="progress-bar-wrap mt-8"><div class="progress-bar ' + k.bar + '" style="width:' + k.pct + '%"></div></div>' : '') +
+  (k.badge ? '<div class="stat-sub mt-8"><span class="stat-badge ' + k.badgeType + '">' + k.badge + '</span></div>' : '') +
+  '</div>'
+).join('');
+
+// Chart bars
+const chartData = [60,75,55,85,70,90,68];
+document.getElementById('chartArea').innerHTML = chartData.map((h, i) =>
+  '<div class="chart-bar" style="height:' + h + '%;background:' +
+  (i === 6 ? 'linear-gradient(180deg,var(--gold),var(--amber))' : 'var(--sand)') + '"></div>'
+).join('');
+
+// Delay budget
+const delays = [
+  {name:'Buka Tutup Pit', type:'fleet', budget:30, real:25, ok:true},
+  {name:'Hujan', type:'fleet', budget:60, real:80, ok:false},
+  {name:'Pengisian BBM', type:'unit', budget:20, real:18, ok:true},
+  {name:'Menunggu Loader', type:'unit', budget:20, real:35, ok:false},
+  {name:'Safety Talk', type:'fleet', budget:30, real:28, ok:true},
+];
+document.getElementById('delayBudget').innerHTML = delays.map(d =>
+  '<div style="margin-bottom:14px">' +
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">' +
+  '<div style="font-size:12px;font-weight:500;display:flex;gap:6px;align-items:center">' +
+  '<span class="badge badge-' + d.type + '" style="padding:1px 6px;font-size:9px">' + d.type.toUpperCase() + '</span>' + d.name +
+  '</div><span class="badge badge-' + (d.ok ? 'ok' : 'over') + '">' + d.real + 'm / ' + d.budget + 'm</span>' +
+  '</div>' +
+  '<div class="progress-bar-wrap"><div class="progress-bar ' + (d.ok ? 'green' : 'red') + '" style="width:' + Math.min(d.real/d.budget*100,100) + '%"></div></div>' +
+  '</div>'
+).join('');
+
+// Unit cards
+const units = [
+  {id:'DT-001',op:'Budi S.',status:'ready',ritase:18,ton:342,pa:'94%',fuel:'3.2L/t'},
+  {id:'DT-002',op:'Agus P.',status:'ready',ritase:21,ton:399,pa:'97%',fuel:'3.0L/t'},
+  {id:'DT-003',op:'Hendra K.',status:'ready',ritase:16,ton:304,pa:'88%',fuel:'3.5L/t'},
+  {id:'DT-004',op:'Rudi W.',status:'breakdown',ritase:8,ton:152,pa:'52%',fuel:'3.8L/t'},
+  {id:'DT-005',op:'Slamet D.',status:'ready',ritase:19,ton:361,pa:'91%',fuel:'3.1L/t'},
+  {id:'DT-006',op:'Yusuf A.',status:'ready',ritase:22,ton:418,pa:'98%',fuel:'2.9L/t'},
+  {id:'DT-007',op:'Bambang R.',status:'pm',ritase:0,ton:0,pa:'0%',fuel:'—'},
+  {id:'DT-008',op:'Dedi S.',status:'ready',ritase:20,ton:380,pa:'93%',fuel:'3.2L/t'},
+];
+document.getElementById('unitGrid').innerHTML = units.map(u =>
+  '<div class="unit-card">' +
+  '<div class="unit-card-header">' +
+  '<span class="unit-id">' + u.id + '</span>' +
+  '<div style="display:flex;align-items:center;gap:5px">' +
+  '<div class="unit-status-dot ' + u.status + '"></div>' +
+  '<span style="font-size:10px;color:var(--text-muted);text-transform:capitalize">' + u.status + '</span>' +
+  '</div></div>' +
+  '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">' + u.op + '</div>' +
+  '<div class="unit-metrics">' +
+  '<div class="unit-metric"><div class="val">' + u.ritase + '</div><div class="lbl">Ritase</div></div>' +
+  '<div class="unit-metric"><div class="val">' + u.ton + '</div><div class="lbl">Ton</div></div>' +
+  '<div class="unit-metric"><div class="val">' + u.pa + '</div><div class="lbl">PA</div></div>' +
+  '<div class="unit-metric"><div class="val">' + u.fuel + '</div><div class="lbl">BBM</div></div>' +
+  '</div></div>'
+).join('');
+
+// Alerts
+const alerts = [
+  {icon:'⚖',title:'3 SJ menunggu data timbangan',sub:'SJ-0021, SJ-0022, SJ-0025',action:'surat_jalan',color:'#FDE8D0'},
+  {icon:'✅',title:'1 Shift menunggu approval',sub:'Shift Malam 06 Jun',action:'approval',color:'#FFF3CD'},
+  {icon:'📝',title:'2 Edit request pending',sub:'Admin SJ & Admin BBM',action:'approval',color:'#FFF3CD'},
+  {icon:'💰',title:'Rate belum dikonfigurasi',sub:'DT Besar + OB di Branch B',action:'master',color:'#F8D7DA'},
+];
+document.getElementById('alertList').innerHTML = alerts.map(a =>
+  '<div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer" onclick="navigate(\'' + a.action + '\')" onmouseover="this.style.background=\'var(--cream)\'" onmouseout="this.style.background=\'\'">' +
+  '<div style="width:36px;height:36px;border-radius:8px;background:' + a.color + ';display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">' + a.icon + '</div>' +
+  '<div style="flex:1"><div style="font-size:13px;font-weight:500">' + a.title + '</div><div style="font-size:11px;color:var(--text-muted)">' + a.sub + '</div></div>' +
+  '<svg width="14" height="14" fill="none" stroke="var(--text-muted)" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>' +
+  '</div>'
+).join('');
+
+// Recent SJ
+const recentSJ = [
+  {sj:'SJ-0031',unit:'DT-006',netto:'19.2 ton',status:'manual'},
+  {sj:'SJ-0030',unit:'DT-002',netto:'18.8 ton',status:'manual'},
+  {sj:'SJ-0029',unit:'DT-001',netto:'19.0 ton',status:'imported'},
+  {sj:'SJ-0028',unit:'DT-005',netto:'—',status:'pending'},
+  {sj:'SJ-0027',unit:'DT-003',netto:'17.5 ton',status:'mismatch'},
+];
+document.getElementById('recentSJ').innerHTML = recentSJ.map(r =>
+  '<tr style="cursor:pointer" onclick="navigate(\'surat_jalan\')">' +
+  '<td style="font-weight:600;font-size:12px">' + r.sj + '</td>' +
+  '<td>' + r.unit + '</td>' +
+  '<td class="tnum">' + r.netto + '</td>' +
+  '<td><span class="badge badge-' + r.status + '">' + r.status + '</span></td>' +
+  '</tr>'
+).join('');
+</script>
+</body>
+</html>

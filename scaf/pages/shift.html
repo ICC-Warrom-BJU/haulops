@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manajemen Shift — HAULOPS</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="main-wrapper">
+  <div id="topbarContainer"></div>
+  <main class="page-content">
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Manajemen Shift</h1>
+        <p>Kelola shift operasional harian armada DT — setiap unit bisa pindah pit dalam 1 shift</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="openModal('shiftHistoryModal')">📅 Riwayat Shift</button>
+        <button class="btn btn-gold" onclick="openModal('openShiftModal')">+ Buka Shift Baru</button>
+      </div>
+    </div>
+
+    <!-- Active Shift Banner -->
+    <div style="background:linear-gradient(135deg,var(--brown-dark),var(--brown-mid));border-radius:var(--radius-lg);padding:22px 26px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;color:white">
+      <div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.6);margin-bottom:4px">Shift Aktif Sekarang</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:22px">Shift Pagi — Senin, 07 Juni 2026</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.7);margin-top:4px">07:00–17:00 · Berjalan 4j 32m · 14 unit aktif · Project CLM Luwu Raya</div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="openModal('shiftDetailModal')">Detail</button>
+        <button class="btn" style="background:rgba(220,38,38,0.85);color:white" onclick="openModal('closeShiftModal')">Tutup Shift</button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="toolbar mb-20">
+      <div class="toolbar-left">
+        <input type="date" class="filter-select" value="2026-06-07">
+        <input type="date" class="filter-select" value="2026-06-07" title="Sampai tanggal">
+        <select class="filter-select" id="filterBranch">
+          <option>Semua Branch</option><option selected>Kalimantan A</option><option>Kalimantan B</option><option>Sulawesi Tengah</option>
+        </select>
+        <select class="filter-select">
+          <option>Semua Tipe Shift</option><option>Shift Pagi (07:00–17:00)</option><option>Shift Malam (19:00–07:00)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Shift List -->
+    <div class="card mb-20">
+      <div class="card-header">
+        <span class="card-title">Daftar Shift</span>
+        <span id="shiftCount" style="font-size:12px;color:var(--text-muted)"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tanggal</th><th>Branch</th><th>Tipe Shift</th><th>Jam Operasi</th><th>Unit Aktif</th><th>Ritase</th><th>Tonase</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="shiftTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL: Buka Shift -->
+<div class="modal-overlay" id="openShiftModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span class="modal-title">Buka Shift Baru</span>
+      <button class="modal-close" onclick="closeModal('openShiftModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row col-3">
+        <div class="form-group">
+          <label class="form-label">Branch <span class="req">*</span></label>
+          <input class="form-control" value="Kalimantan A" disabled style="background:var(--cream);font-weight:600">
+          <div class="form-hint">Otomatis sesuai branch akun Anda</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tanggal <span class="req">*</span></label>
+          <input class="form-control" type="date" value="2026-06-07">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipe Shift <span class="req">*</span></label>
+          <select class="form-control" id="tipeShiftSelect" onchange="updateJamShift()">
+            <option value="pagi" selected>Shift Pagi (07:00–17:00)</option>
+            <option value="malam">Shift Malam (19:00–07:00)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row col-3">
+        <div class="form-group">
+          <label class="form-label">Jam Mulai</label>
+          <input class="form-control" type="time" id="jamMulai" value="06:00" disabled>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Jam Selesai</label>
+          <input class="form-control" type="time" id="jamSelesai" value="14:00" disabled>
+          <div class="form-hint">Otomatis sesuai tipe shift. Shift Malam = lintas hari.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Jam tersedia</label>
+          <input class="form-control" id="jamTersedia" value="8 jam" disabled style="background:var(--gold-pale);font-weight:600">
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="form-section-title" style="margin:0">Unit DT Aktif Shift Ini</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="openModal('generateShiftModal')">📋 Generate dari Tanggal Lain</button>
+          <button class="btn btn-gold btn-sm" onclick="showToast('14 unit berhasil di-generate')">⚡ Generate Semua Unit Aktif</button>
+        </div>
+      </div>
+      <div class="alert alert-info">Unit yang di-assign akan tersedia sebagai pilihan saat input Rit Operation, Delay, BBM, dan Maintenance hari ini.</div>
+
+      <div style="max-height:240px;overflow-y:auto">
+        <table>
+          <thead><tr><th style="width:36px"></th><th>Unit</th><th>Tipe Unit</th><th>Kapasitas</th><th>Operator</th><th>Material</th><th>Status Awal</th></tr></thead>
+          <tbody id="shiftUnitBody"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-ghost btn-sm mt-8" onclick="showToast('Tambah unit')">+ Tambah Unit Lain</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('openShiftModal')">Batal</button>
+      <button class="btn btn-primary" onclick="closeModal('openShiftModal');showToast('Shift Pagi 07 Jun berhasil dibuka');showToast('Status awal unit: Ready')">Buka Shift</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Generate dari Tanggal Lain -->
+<div class="modal-overlay" id="generateShiftModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">Generate Data Unit dari Tanggal Lain</span>
+      <button class="modal-close" onclick="closeModal('generateShiftModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info">📅 Salin data unit dari tanggal tertentu sebagai titik awal. Data unit, operator, dan material akan disalin.</div>
+      <div class="form-group">
+        <label class="form-label">Pilih Tanggal Sumber <span class="req">*</span></label>
+        <input class="form-control" type="date" id="generateSourceDate" value="2026-06-06">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pilih Shift Sumber</label>
+        <select class="form-control" id="generateSourceShift">
+          <option value="pagi">Shift Pagi (07:00–17:00)</option>
+          <option value="malam">Shift Malam (19:00–07:00)</option>
+        </select>
+      </div>
+      <div class="alert alert-info mt-12" style="font-size:12px">Unit yang baru akan muncul di tabel unit dengan status default <strong>Ready</strong>.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('generateShiftModal')">Batal</button>
+      <button class="btn btn-primary" onclick="generateFromDate()">Generate Sekarang</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Detail Shift -->
+<div class="modal-overlay" id="shiftDetailModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span class="modal-title">Detail Shift Pagi — 07 Juni 2026</span>
+      <button class="modal-close" onclick="closeModal('shiftDetailModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tabs">
+        <div class="tab active">KPI Summary</div>
+        <div class="tab">Unit & Operator</div>
+        <div class="tab">Rit Operation</div>
+        <div class="tab">Delay</div>
+        <div class="tab">BBM</div>
+        <div class="tab">Maintenance</div>
+      </div>
+      <div id="shiftKpiGrid" class="grid-4" style="gap:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('shiftDetailModal')">Tutup</button>
+      <button class="btn btn-gold" onclick="closeModal('shiftDetailModal');showToast('Laporan shift diekspor')">⬇ Export</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Tutup Shift -->
+<div class="modal-overlay" id="closeShiftModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">Tutup Shift</span>
+      <button class="modal-close" onclick="closeModal('closeShiftModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="closeShiftAlerts">
+        <div class="alert alert-warn">⚠ 3 record Rit masih belum ada data timbangan.</div>
+      </div>
+      <div id="uaZeroAlert" style="display:none" class="alert alert-danger">⚠ Terdapat unit dengan ritase > 0 tetapi UA% = 0! Periksa data unit bersangkutan sebelum menutup shift.</div>
+      <div style="background:var(--cream);border-radius:8px;padding:12px;font-size:13px;display:grid;gap:6px">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Total Rit</span><strong>247 trip</strong></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Total Tonase</span><strong>4.832 ton</strong></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Unit aktif</span><strong>14 DT</strong></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">PA rata-rata</span><strong style="color:#16A34A">87.5%</strong></div>
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-top:12px">Shift yang ditutup masuk status <strong>Pending Approval</strong> dan Supervisor akan dinotifikasi.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('closeShiftModal')">Batal</button>
+      <button class="btn btn-primary" onclick="tutupShift()">Tutup & Kirim ke Supervisor</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Approval quick -->
+<div class="modal-overlay" id="approvalModal">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <span class="modal-title">Review & Approval — Shift Malam 06 Jun</span>
+      <button class="modal-close" onclick="closeModal('approvalModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="approvalKpiGrid" class="grid-4" style="gap:10px;margin-bottom:16px"></div>
+      <div class="alert alert-warn">⚠ 1 delay melebihi budget: Hujan 80 mnt (budget 60 mnt)</div>
+      <div class="alert alert-warn">⚠ DT-004 breakdown hours melebihi budget harian (4.5j / budget 3j)</div>
+      <div class="form-group mt-12">
+        <label class="form-label">Catatan Supervisor (opsional)</label>
+        <textarea class="form-control" rows="2" placeholder="Tambahkan catatan jika perlu..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="closeModal('approvalModal');showToast('Shift ditolak','warn')">✕ Reject</button>
+      <button class="btn btn-success" onclick="closeModal('approvalModal');showToast('Shift berhasil di-approve')">✓ Approve Shift</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+document.getElementById('sidebarContainer').innerHTML = renderSidebar('shift');
+document.getElementById('topbarContainer').innerHTML = renderTopbar('Manajemen Shift');
+
+const SHIFT_JAM = {
+  pagi:{mulai:'07:00',selesai:'17:00',durasi:'10 jam'},
+  malam:{mulai:'19:00',selesai:'07:00',durasi:'12 jam (lintas hari)'},
+};
+function updateJamShift(){
+  const v=document.getElementById('tipeShiftSelect').value;
+  const d=SHIFT_JAM[v];
+  document.getElementById('jamMulai').value=d.mulai;
+  document.getElementById('jamSelesai').value=d.selesai;
+  document.getElementById('jamTersedia').value=d.durasi;
+}
+
+const shifts=[
+  {tgl:'07 Jun 2026',branch:'Kalimantan A',tipe:'Pagi',jam:'07:00–17:00',unit:14,ritase:247,ton:'4,832',status:'open'},
+  {tgl:'06 Jun 2026',branch:'Kalimantan A',tipe:'Malam',jam:'19:00–07:00*',unit:12,ritase:310,ton:'5,890',status:'pending'},
+  {tgl:'06 Jun 2026',branch:'Kalimantan A',tipe:'Pagi',jam:'07:00–17:00',unit:15,ritase:328,ton:'6,232',status:'approved'},
+  {tgl:'06 Jun 2026',branch:'Kalimantan A',tipe:'Pagi',jam:'07:00–17:00',unit:14,ritase:298,ton:'5,662',status:'approved'},
+  {tgl:'06 Jun 2026',branch:'Kalimantan B',tipe:'Pagi',jam:'07:00–17:00',unit:8,ritase:156,ton:'2,808',status:'approved'},
+  {tgl:'05 Jun 2026',branch:'Kalimantan A',tipe:'Malam',jam:'19:00–07:00*',unit:13,ritase:302,ton:'5,738',status:'approved'},
+  {tgl:'05 Jun 2026',branch:'Kalimantan A',tipe:'Pagi',jam:'07:00–17:00',unit:15,ritase:315,ton:'5,985',status:'approved'},
+];
+const statusLabel={open:'Berjalan',pending:'Pending Approval',approved:'Approved',rejected:'Rejected'};
+document.getElementById('shiftCount').textContent=shifts.length+' shift ditemukan';
+document.getElementById('shiftTableBody').innerHTML=shifts.map(s=>
+  '<tr>'+
+  '<td><strong>'+s.tgl+'</strong></td>'+
+  '<td><span class="tag">'+s.branch+'</span></td>'+
+  '<td><span class="badge badge-'+s.tipe+'">'+s.tipe.charAt(0).toUpperCase()+s.tipe.slice(1)+'</span></td>'+
+  '<td class="muted">'+s.jam+'</td>'+
+  '<td>'+s.unit+' unit</td>'+
+  '<td class="tnum">'+s.ritase+'</td>'+
+  '<td class="tnum">'+s.ton+' ton</td>'+
+  '<td><span class="badge badge-'+s.status+'">'+statusLabel[s.status]+'</span></td>'+
+  '<td><div style="display:flex;gap:5px">'+
+  '<button class="btn btn-ghost btn-sm" onclick="openModal(\'shiftDetailModal\')">Detail</button>'+
+  (s.status==='pending'?'<button class="btn btn-gold btn-sm" onclick="openModal(\'approvalModal\')">Approve</button>':'')+
+  '</div></td>'+
+  '</tr>'
+).join('');
+
+const unitRows=['DT-001','DT-002','DT-003','DT-004','DT-005'];
+const kapasitas={'DT-001':'20 ton','DT-002':'20 ton','DT-003':'20 ton','DT-004':'40 ton','DT-005':'20 ton'};
+const tipeUnit={'DT-001':'DT Kecil','DT-002':'DT Kecil','DT-003':'DT Kecil','DT-004':'DT Besar','DT-005':'DT Kecil'};
+document.getElementById('shiftUnitBody').innerHTML=unitRows.map(u=>
+  '<tr>'+
+  '<td><input type="checkbox" checked style="accent-color:var(--brown-dark)"></td>'+
+  '<td><strong>'+u+'</strong></td>'+
+  '<td class="muted">'+tipeUnit[u]+'</td>'+
+  '<td class="muted tnum">'+kapasitas[u]+'</td>'+
+  '<td><select class="form-control" style="padding:4px 8px;font-size:12px"><option>Budi S.</option><option>Agus P.</option><option>Hendra K.</option></select></td>'+
+  '<td><select class="form-control" style="padding:4px 8px;font-size:12px"><option>Nikel OB</option><option>Nikel ORE</option></select></td>'+
+  '<td><select class="form-control" style="padding:4px 8px;font-size:12px"><option selected>Ready</option><option>Standby</option><option>Breakdown</option></select></td>'+
+  '</tr>'
+).join('');
+
+const kpiItems=[
+  {l:'Ritase',v:'247 trip'},{l:'Tonase',v:'4.832 ton'},
+  {l:'PA Avg',v:'87.5%'},{l:'UA Avg',v:'74.2%'},
+  {l:'Avg Cycle Time',v:'38 mnt'},{l:'Total BBM',v:'1.240 L'},
+  {l:'Unit Aktif',v:'14 DT'},{l:'Downtime Total',v:'270 mnt'},
+];
+document.getElementById('shiftKpiGrid').innerHTML=kpiItems.map(k=>
+  '<div style="background:var(--cream);border-radius:8px;padding:12px 14px;border:1px solid var(--border)">'+
+  '<div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px">'+k.l+'</div>'+
+  '<div style="font-family:\'DM Serif Display\',serif;font-size:20px;margin-top:2px">'+k.v+'</div>'+
+  '</div>'
+).join('');
+
+const apKpi=[{l:'Ritase',v:'310'},{l:'Tonase',v:'5.890t'},{l:'PA',v:'91%'},{l:'UA',v:'78%'}];
+document.getElementById('approvalKpiGrid').innerHTML=apKpi.map(k=>
+  '<div style="background:var(--cream);border-radius:8px;padding:10px;border:1px solid var(--border);text-align:center">'+
+  '<div style="font-size:10px;color:var(--text-muted)">'+k.l+'</div>'+
+  '<div style="font-size:18px;font-weight:700;margin-top:2px">'+k.v+'</div>'+
+  '</div>'
+).join('');
+
+// UA% validation: per unit per day, UA% > 0 if unit has >= 1 ritase
+function validateUAZero() {
+  // Simulasi data unit per shift: unit dengan ritase > 0 dan UA% = 0
+  const unitData = [
+    {unit:'DT-001',rit:18,ua:82},{unit:'DT-002',rit:21,ua:88},
+    {unit:'DT-003',rit:16,ua:76},{unit:'DT-004',rit:8,ua:45},
+    {unit:'DT-005',rit:19,ua:84},{unit:'DT-006',rit:22,ua:91},
+    {unit:'DT-007',rit:0,ua:0},{unit:'DT-008',rit:20,ua:86},
+  ];
+  const problematic = unitData.filter(u => u.rit > 0 && u.ua === 0);
+  return problematic;
+}
+
+// Override openModal untuk closeShiftModal
+const origOpenModal = window.openModal;
+window.openModal = function(id) {
+  if (id === 'closeShiftModal' && typeof origOpenModal === 'function') {
+    const problematic = validateUAZero();
+    const alertEl = document.getElementById('uaZeroAlert');
+    if (alertEl) {
+      if (problematic.length > 0) {
+        alertEl.style.display = 'block';
+        alertEl.innerHTML = '⚠ <strong>Validasi UA% Gagal!</strong> Unit berikut memiliki ritase > 0 tetapi UA% = 0: ' +
+          problematic.map(u => u.unit + ' (rit: ' + u.rit + ')').join(', ') +
+          '. Data tidak valid — perbaiki sebelum menutup shift.';
+      } else {
+        alertEl.style.display = 'none';
+      }
+    }
+  }
+  if (typeof origOpenModal === 'function') origOpenModal(id);
+};
+
+function generateFromDate() {
+  const tgl = document.getElementById('generateSourceDate').value;
+  if (!tgl) { showToast('Pilih tanggal sumber terlebih dahulu', 'warn'); return; }
+  closeModal('generateShiftModal');
+  showToast('Data unit dari ' + tgl + ' berhasil di-generate dengan status Ready');
+}
+
+function tutupShift() {
+  const problematic = validateUAZero();
+  if (problematic.length > 0) {
+    showToast('Tidak dapat menutup shift: ' + problematic.length + ' unit memiliki ritase > 0 tapi UA% = 0','warn');
+    return;
+  }
+  closeModal('closeShiftModal');
+  showToast('Shift ditutup, menunggu approval Supervisor');
+}
+</script>
+</body>
+</html>

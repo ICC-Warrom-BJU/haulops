@@ -1,0 +1,52 @@
+# ============================================================
+# Stage 1: Builder — Install deps & compile TypeScript
+# ============================================================
+FROM node:20-slim AS builder
+
+# Install openssl for Prisma
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json ./
+
+# Install ALL dependencies (termasuk devDependencies untuk build)
+RUN npm install
+
+# Copy prisma schema lalu generate client
+COPY prisma ./prisma
+RUN npx prisma generate
+
+# Copy source dan compile TypeScript
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
+
+# ============================================================
+# Stage 2: Runner — Image final yang ringan, hanya produksi
+# ============================================================
+FROM node:20-slim AS runner
+
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy package.json untuk install production deps
+COPY package.json ./
+RUN npm install --omit=dev
+
+# Copy prisma schema & generated client dari builder
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Copy compiled JS dari builder
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 4001
+
+# Jalankan migrasi Prisma lalu start server
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]

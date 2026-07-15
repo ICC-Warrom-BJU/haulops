@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maintenance — HAULOPS</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    .ag-outer{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+    .ag-header{display:grid;background:var(--cream-deep);border-bottom:2px solid var(--cream-border)}
+    .ag-header-cell{padding:9px 12px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-secondary);white-space:nowrap;border-right:1px solid var(--border)}
+    .ag-header-cell:last-child{border-right:none}
+    .ag-row{display:grid;border-bottom:1px solid var(--border);transition:background .1s}
+    .ag-row:last-child{border-bottom:none}
+    .ag-row:hover{background:var(--bg-hover)}
+    .ag-row.over-budget{background:rgba(248,215,218,0.2)}
+    .ag-row.over-budget:hover{background:rgba(248,215,218,0.35)}
+    .ag-cell{padding:10px 12px;font-size:12px;display:flex;align-items:center;border-right:1px solid var(--border);overflow:hidden}
+    .ag-cell:last-child{border-right:none}
+    .budget-bar-wrap{width:100%;height:5px;background:var(--cream-deep);border-radius:3px;overflow:hidden;margin-top:3px}
+    .budget-bar{height:100%;border-radius:3px}
+  </style>
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="main-wrapper">
+  <div id="topbarContainer"></div>
+  <main class="page-content">
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Maintenance & Downtime</h1>
+        <p>Input 1 hari 1 kali per unit · Actual vs Budget Breakdown Hours · Budget jam operasi: 07:00–17:00</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="openModal('generateModal')">📋 Generate dari Data Lain</button>
+        <button class="btn btn-gold" onclick="openModal('inputMaintenanceModal')">+ Input Downtime</button>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div id="maintKpi" class="grid-4 mb-20"></div>
+
+    <!-- Filters -->
+    <div class="toolbar mb-16">
+      <div class="toolbar-left" style="flex-wrap:wrap;gap:8px">
+        <input type="date" class="filter-select" value="2026-06-07">
+        <input type="date" class="filter-select" value="2026-06-07">
+        <select class="filter-select"><option>Semua Branch</option><option selected>Kalimantan A</option><option>Kalimantan B</option></select>
+        <select class="filter-select"><option>Semua Unit</option><option>DT-001</option><option>DT-004</option><option>DT-007</option></select>
+        <select class="filter-select"><option>Semua Tipe Unit</option><option>DT Kecil</option><option>DT Besar</option></select>
+        <select class="filter-select"><option>Semua Status</option><option>Over Budget</option><option>Within Budget</option><option>Full Day Breakdown</option></select>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="showToast('Data maintenance diekspor')">⬇ Export Excel</button>
+    </div>
+
+    <!-- AG Grid: Issues (Breakdown, Full Day BD, PM) -->
+    <div class="card mb-16">
+      <div class="card-header"><span class="card-title">Downtime & Maintenance — Breakdown / PM</span></div>
+      <div class="ag-outer" id="maintIssueGrid"></div>
+    </div>
+
+    <!-- AG Grid: Ready Units -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">Unit Ready (Tidak Ada Downtime)</span></div>
+      <div class="ag-outer" id="maintReadyGrid"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL: Input Maintenance -->
+<div class="modal-overlay" id="inputMaintenanceModal">
+  <div class="modal modal-md">
+    <div class="modal-header"><span class="modal-title">Input Downtime Unit</span><button class="modal-close" onclick="closeModal('inputMaintenanceModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-info">Input dilakukan 1 hari 1 kali per unit. Jika breakdown full day, pilih "Full Day" untuk auto-isi 07:00–17:00.</div>
+      <div class="form-row col-2">
+        <div class="form-group">
+          <label class="form-label">Tanggal <span class="req">*</span></label>
+          <input class="form-control" type="date" value="2026-06-07">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Branch</label>
+          <select class="form-control"><option>Kalimantan A</option><option>Kalimantan B</option></select>
+        </div>
+      </div>
+      <div class="form-row col-2">
+        <div class="form-group">
+          <label class="form-label">RPR Number <span class="req">*</span></label>
+          <input class="form-control" placeholder="Contoh: RPR-2026-06-001" style="font-size:12px">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit DT <span class="req">*</span></label>
+          <select class="form-control" id="maintUnitSelect" onchange="showUnitBudget()">
+            <option>-- Pilih Unit --</option>
+            <option data-budget="3">DT-001 (Budget: 3 jam/hari)</option>
+            <option data-budget="3">DT-002 (Budget: 3 jam/hari)</option>
+            <option data-budget="4">DT-004 (Budget: 4 jam/hari)</option>
+            <option data-budget="3">DT-007 (Budget: 3 jam/hari)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row col-2">
+        <div class="form-group">
+          <label class="form-label">Jenis Downtime <span class="req">*</span></label>
+          <select class="form-control" id="jenisDowntime" onchange="toggleFullDay()">
+            <option>Breakdown — Kerusakan Tak Terduga</option>
+            <option>PM — Preventive Maintenance</option>
+            <option>Full Day — 10 jam (07:00–17:00)</option>
+            <option>Standby — Menunggu Instruksi</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-control" id="maintStatus">
+            <option selected>Ongoing</option>
+            <option>Completed</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Budget info box -->
+      <div id="budgetInfoBox" style="background:var(--gold-pale);border:1px solid rgba(200,150,0,0.25);border-radius:8px;padding:10px 14px;margin-bottom:14px;display:none">
+        <div style="font-size:11px;color:var(--gold-dark);font-weight:600;margin-bottom:2px">Budget Breakdown Harian Unit Ini</div>
+        <div style="font-size:18px;font-weight:700" id="budgetVal">—</div>
+      </div>
+
+      <div class="form-row col-2" id="jamFields">
+        <div class="form-group">
+          <label class="form-label">Jam Mulai <span class="req">*</span></label>
+          <input class="form-control" type="datetime-local" id="jamMulaiMaint">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Jam Selesai <span id="selesaiLabel">(opsional jika >1 hari)</span></label>
+          <input class="form-control" type="datetime-local" id="jamSelesaiMaint">
+          <div class="form-hint">Kosongkan jika >1 hari atau masih ongoing. Jika >24 jam, jam selesai tidak wajib.</div>
+        </div>
+      </div>
+
+      <div style="background:var(--cream-deep);border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;gap:20px">
+        <div><span style="font-size:10px;color:var(--text-muted)">Durasi Actual</span><div style="font-weight:700;font-size:18px" id="durasiDisplay">— jam</div></div>
+        <div><span style="font-size:10px;color:var(--text-muted)">vs Budget</span><div style="font-weight:700;font-size:18px;color:var(--text-muted)" id="vsbudgetDisplay">—</div></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Keterangan / Deskripsi Masalah <span class="req">*</span></label>
+        <textarea class="form-control" rows="3" placeholder="Deskripsikan kerusakan atau jenis PM yang dilakukan..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Part yang Diganti <span style="color:var(--text-muted);font-weight:400">(Khusus PM, opsional)</span></label>
+        <input class="form-control" placeholder="Contoh: Oli mesin 20L, filter oli, v-belt...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('inputMaintenanceModal')">Batal</button>
+      <button class="btn btn-primary" onclick="closeModal('inputMaintenanceModal');showToast('Data downtime berhasil disimpan')">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Generate -->
+<div class="modal-overlay" id="generateModal">
+  <div class="modal modal-sm">
+    <div class="modal-header"><span class="modal-title">Generate Data Downtime</span><button class="modal-close" onclick="closeModal('generateModal')">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Salin data downtime dari tanggal lain sebagai titik awal — lalu sesuaikan jika ada perubahan.</p>
+      <div class="form-group">
+        <label class="form-label">Generate dari Tanggal</label>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-gold btn-sm" onclick="showToast('Data dari kemarin berhasil di-generate');closeModal('generateModal')">📋 Kemarin (06 Jun)</button>
+          <button class="btn btn-outline btn-sm" onclick="showToast('Pilih tanggal spesifik')">📅 Pilih Tanggal</button>
+        </div>
+      </div>
+      <div class="form-group" id="customDateField" style="display:none">
+        <label class="form-label">Tanggal Sumber</label>
+        <input class="form-control" type="date" value="2026-06-06">
+      </div>
+      <div class="alert alert-info mt-12">Unit yang tidak ada di data sumber akan diabaikan. Unit baru perlu diinput manual.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('generateModal')">Batal</button>
+      <button class="btn btn-primary" onclick="closeModal('generateModal');showToast('14 unit berhasil di-generate dari kemarin')">Generate Sekarang</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+document.getElementById('sidebarContainer').innerHTML = renderSidebar('maintenance');
+document.getElementById('topbarContainer').innerHTML = renderTopbar('Maintenance & Downtime');
+
+// KPI
+const maintKpi=[
+  {l:'Unit Ready (Hari Ini)',v:'12',icon:'✅',bg:'#D4EDDA',c:'#16A34A'},
+  {l:'Breakdown',v:'1',icon:'🔴',bg:'#F8D7DA',c:'#DC2626'},
+  {l:'PM Terjadwal',v:'1',icon:'🔧',bg:'#FFF3CD',c:'#CA8A04'},
+  {l:'Over Budget Hours',v:'2 unit',icon:'⚠',bg:'var(--sand-light)',c:'var(--brown-dark)'},
+];
+document.getElementById('maintKpi').innerHTML=maintKpi.map(s=>
+  '<div class="stat-card">'+
+  '<div class="stat-icon" style="background:'+s.bg+'">'+s.icon+'</div>'+
+  '<div class="stat-label">'+s.l+'</div>'+
+  '<div class="stat-value" style="color:'+s.c+';font-size:26px">'+s.v+'</div>'+
+  '</div>'
+).join('');
+
+// AG Grid data — 1 day 1 unit
+const maintData=[
+  {tgl:'07/06/2026',branch:'Kal. A',unit:'DT-001',tipe:'DT Kecil',op:'Budi S.',jenis:'Ready',mulai:'07/06/2026 06:00',selesai:'07/06/2026 14:00',durasi:0,budget:3,ket:'Beroperasi normal',part:'—',status:'completed'},
+  {tgl:'07/06/2026',branch:'Kal. A',unit:'DT-002',tipe:'DT Kecil',op:'Agus P.',jenis:'Ready',mulai:'07/06/2026 06:00',selesai:'07/06/2026 14:00',durasi:0,budget:3,ket:'Beroperasi normal',part:'—',status:'completed'},
+  {tgl:'07/06/2026',branch:'Kal. A',unit:'DT-003',tipe:'DT Kecil',op:'Hendra K.',jenis:'PM',mulai:'07/06/2026 06:00',selesai:'07/06/2026 07:30',durasi:1.5,budget:3,ket:'Service 250 HM rutin',part:'Oli mesin 20L, filter',status:'completed'},
+  {tgl:'07/06/2026',branch:'Kal. A',unit:'DT-004',tipe:'DT Besar',op:'Rudi W.',jenis:'Breakdown',mulai:'07/06/2026 09:00',selesai:'—',durasi:4.5,budget:4,ket:'Hydraulic bocor, menunggu spare part',part:'—',status:'ongoing'},
+  {tgl:'07/06/2026',branch:'Kal. A',unit:'DT-005',tipe:'DT Kecil',op:'Slamet D.',jenis:'Ready',mulai:'07/06/2026 06:00',selesai:'07/06/2026 14:00',durasi:0,budget:3,ket:'Beroperasi normal',part:'—',status:'completed'},
+  {tgl:'07/06/2026',branch:'Kal. A',unit:'DT-006',tipe:'DT Kecil',op:'Yusuf A.',jenis:'Ready',mulai:'07/06/2026 06:00',selesai:'07/06/2026 14:00',durasi:0,budget:3,ket:'Beroperasi normal',part:'—',status:'completed'},
+  {tgl:'07/06/2026',branch:'Kal. A',unit:'DT-007',tipe:'DT Besar',op:'Bambang R.',jenis:'Full Day BD',mulai:'07/06/2026 07:00',selesai:'07/06/2026 17:00',durasi:10,budget:4,ket:'Engine overheat — full day breakdown',part:'—',status:'ongoing'},
+  {tgl:'07/06/2026',branch:'Kal. A',unit:'DT-008',tipe:'DT Kecil',op:'Dedi S.',jenis:'Ready',mulai:'07/06/2026 06:00',selesai:'07/06/2026 14:00',durasi:0,budget:3,ket:'Beroperasi normal',part:'—',status:'completed'},
+];
+
+const jenisBadge={
+  'Ready':'badge-approved','PM':'badge-pending',
+  'Breakdown':'badge-rejected','Full Day BD':'badge-rejected',
+};
+
+const cols=[
+  {key:'tgl',label:'Tanggal',w:'90px'},
+  {key:'branch',label:'Branch',w:'80px'},
+  {key:'unit',label:'Unit',w:'72px'},
+  {key:'tipe',label:'Tipe',w:'75px'},
+  {key:'op',label:'Operator',w:'90px'},
+  {key:'jenis',label:'Jenis',w:'95px'},
+  {key:'status',label:'Status',w:'70px'},
+  {key:'mulai',label:'Mulai',w:'60px'},
+  {key:'selesai',label:'Selesai',w:'65px'},
+  {key:'durasi',label:'Actual (jam)',w:'90px'},
+  {key:'budget',label:'Budget (jam)',w:'90px'},
+  {key:'vs',label:'Actual vs Budget',w:'160px'},
+  {key:'ket',label:'Keterangan',w:'auto'},
+  {key:'aksi',label:'',w:'110px'},
+];
+
+const gridCols=cols.map(c=>c.w==='auto'?'1fr':c.w).join(' ');
+
+function renderMaintGrid(containerId, data, title) {
+  let html='<div class="ag-header" style="grid-template-columns:'+gridCols+'">';
+  cols.forEach(c=>{html+='<div class="ag-header-cell">'+c.label+'</div>';});
+  html+='</div>';
+  data.forEach(r=>{
+    const isOver=r.durasi>r.budget;
+    const pct=r.budget>0?Math.min(r.durasi/r.budget*100,100):0;
+    html+='<div class="ag-row'+(isOver?' over-budget':'')+'" style="grid-template-columns:'+gridCols+'">';
+    html+='<div class="ag-cell"><span style="font-size:11px">'+r.tgl+'</span></div>';
+    html+='<div class="ag-cell"><span class="tag" style="font-size:10px">'+r.branch+'</span></div>';
+    html+='<div class="ag-cell"><strong>'+r.unit+'</strong></div>';
+    html+='<div class="ag-cell muted" style="font-size:11px">'+r.tipe+'</div>';
+    html+='<div class="ag-cell muted" style="font-size:11px">'+r.op+'</div>';
+    html+='<div class="ag-cell"><span class="badge '+(jenisBadge[r.jenis]||'badge-manual')+'" style="font-size:10px">'+r.jenis+'</span></div>';
+    html+='<div class="ag-cell"><span class="badge '+(r.status==='ongoing'?'badge-pending':'badge-approved')+'" style="font-size:9px">'+r.status+'</span></div>';
+    html+='<div class="ag-cell muted tnum">'+r.mulai+'</div>';
+    html+='<div class="ag-cell muted tnum">'+r.selesai+'</div>';
+    html+='<div class="ag-cell tnum"><strong style="color:'+(isOver&&r.durasi>0?'#DC2626':'var(--text-primary)')+'">'+( r.durasi>0?r.durasi+'j':'—')+'</strong></div>';
+    html+='<div class="ag-cell tnum muted">'+r.budget+'j</div>';
+    html+='<div class="ag-cell" style="flex-direction:column;align-items:flex-start;gap:4px">';
+    if(r.durasi===0){
+      html+='<span style="font-size:11px;color:#16A34A">✓ Tidak ada downtime</span>';
+    }else{
+      html+='<div style="display:flex;justify-content:space-between;width:100%;font-size:11px">'+
+        '<span style="color:'+(isOver?'#DC2626':'var(--text-secondary)')+'">'+r.durasi+'j / '+r.budget+'j</span>'+
+        '<span class="badge '+(isOver?'badge-over':'badge-ok')+'" style="font-size:9px">'+(isOver?'Over '+( r.durasi-r.budget)+'j':'OK')+'</span>'+
+        '</div>'+
+        '<div class="budget-bar-wrap"><div class="budget-bar" style="width:'+pct+'%;background:'+(isOver?'#DC2626':'#16A34A')+'"></div></div>';
+    }
+    html+='</div>';
+    html+='<div class="ag-cell muted" style="font-size:11px">'+r.ket+'</div>';
+    html+='<div class="ag-cell">'+
+      (r.jenis!=='Ready' && r.status==='ongoing'
+        ? '<button class="btn btn-gold btn-sm" onclick="markUnitReady(\''+r.unit+'\')">✓ Unit Ready</button>'
+        : r.status==='ongoing'
+          ? '<button class="btn btn-ghost btn-sm" onclick="openModal(\'inputMaintenanceModal\')">✏</button>'
+          : '<span style="font-size:11px;color:#16A34A">✓ Selesai</span>') +
+    '</div>';
+    html+='</div>';
+  });
+  document.getElementById(containerId).innerHTML=html;
+}
+
+const issueTypes=['Breakdown','Full Day BD','PM'];
+const issueData=maintData.filter(r=>issueTypes.includes(r.jenis));
+const readyData=maintData.filter(r=>r.jenis==='Ready');
+renderMaintGrid('maintIssueGrid', issueData);
+renderMaintGrid('maintReadyGrid', readyData);
+
+function markUnitReady(unitCode) {
+  const idx = maintData.findIndex(r => r.unit === unitCode && r.status === 'ongoing');
+  if (idx === -1) { showToast('Unit tidak ditemukan atau sudah Ready','warn'); return; }
+  const now = new Date();
+  const jamSelesai = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  maintData[idx].status = 'completed';
+  maintData[idx].selesai = now.toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + jamSelesai;
+  // Update durasi
+  const mulai = new Date(maintData[idx].mulai);
+  const selesai = new Date();
+  maintData[idx].durasi = Math.round((selesai - mulai) / 3600000 * 10) / 10;
+  // Change jenis to Ready
+  maintData[idx].jenis = 'Ready';
+  // Refresh both grids
+  const issueData = maintData.filter(r => issueTypes.includes(r.jenis));
+  const readyData = maintData.filter(r => r.jenis === 'Ready');
+  renderMaintGrid('maintIssueGrid', issueData);
+  renderMaintGrid('maintReadyGrid', readyData);
+  showToast('✓ Unit ' + unitCode +  ' ditandai Ready (selesai: ' + jamSelesai + ')');
+}
+
+function showUnitBudget(){
+  const sel=document.getElementById('maintUnitSelect');
+  const opt=sel.options[sel.selectedIndex];
+  const bud=opt.getAttribute('data-budget');
+  const box=document.getElementById('budgetInfoBox');
+  if(bud){
+    document.getElementById('budgetVal').textContent=bud+' jam / hari';
+    box.style.display='block';
+  }else{
+    box.style.display='none';
+  }
+}
+function toggleFullDay(){
+  const jenis=document.getElementById('jenisDowntime').value;
+  if(jenis.includes('Full Day')){
+    document.getElementById('jamMulaiMaint').value='2026-06-07T07:00';
+    document.getElementById('jamSelesaiMaint').value='2026-06-07T17:00';
+    document.getElementById('durasiDisplay').textContent='10 jam';
+    document.getElementById('vsbudgetDisplay').textContent='Tergantung budget unit';
+  }
+}
+</script>
+</body>
+</html>

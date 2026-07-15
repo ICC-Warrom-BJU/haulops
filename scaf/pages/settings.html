@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengaturan — HAULOPS</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="main-wrapper">
+  <div id="topbarContainer"></div>
+  <main class="page-content">
+    <div class="page-header">
+      <div class="page-header-left"><h1>Pengaturan Sistem</h1><p>Manajemen user, branch, role, dan konfigurasi akun</p></div>
+    </div>
+
+    <div class="tabs" id="settingsTabs">
+      <div class="tab active" onclick="switchSettings('users')" data-tab="users" data-tab="users">Manajemen User</div>
+      <div class="tab" onclick="switchSettings('branches')" data-tab="branches" data-tab="branches">Branch</div>
+      <div class="tab" onclick="switchSettings('roles')" data-tab="roles" data-tab="roles">Role & Akses</div>
+      <div class="tab" onclick="switchSettings('profile')" data-tab="profile" data-tab="profile">Profil Saya</div>
+    </div>
+
+    <!-- TAB: Users -->
+    <div id="tab-users">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="search-box"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input placeholder="Cari nama / username..."></div>
+          <select class="filter-select">
+            <option>Semua Role</option>
+            <option>Super Admin</option>
+            <option>Supervisor</option>
+            <option>Admin Mining</option>
+            <option>General Admin</option>
+            <option>Viewer</option>
+          </select>
+          <select class="filter-select"><option>Semua Branch</option><option>Kalimantan A</option><option>Kalimantan B</option></select>
+        </div>
+        <button class="btn btn-gold" onclick="openModal('addUserModal')">+ Tambah User</button>
+      </div>
+
+      <!-- Role Info Banner -->
+      <div class="alert alert-info mb-16">
+        <div>
+          <strong>Role baru: Admin Mining & General Admin.</strong>
+          Admin Mining menggantikan role terpisah (Admin SJ, Admin Lapangan, Admin BBM, Maintenance, Cycle Time).
+          General Admin memiliki akses ke semua fungsi Admin Mining + konfigurasi master data branch.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Branch Akses</th><th>Last Login</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="usersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Branches -->
+    <div id="tab-branches" style="display:none">
+      <div class="toolbar">
+        <div class="toolbar-left"></div>
+        <button class="btn btn-gold" onclick="openModal('addBranchModal')">+ Tambah Branch</button>
+      </div>
+      <div id="branchCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px"></div>
+    </div>
+
+    <!-- TAB: Roles -->
+    <div id="tab-roles" style="display:none">
+      <div class="alert alert-info mb-16">Definisi role dan hak akses per modul. Role tidak bisa dihapus, hanya bisa dinonaktifkan penggunaannya.</div>
+      <div id="roleCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px"></div>
+    </div>
+
+    <!-- TAB: Profile -->
+    <div id="tab-profile" style="display:none">
+      <div class="grid-2" style="max-width:800px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Informasi Akun</span></div>
+          <div class="card-body">
+            <div style="text-align:center;margin-bottom:20px">
+              <div class="user-avatar" style="width:60px;height:60px;font-size:20px;margin:0 auto 10px">AM</div>
+              <div style="font-weight:700;font-size:16px">Ahmad BJU</div>
+              <div style="font-size:12px;color:var(--text-muted)">Admin Mining · Project CLM Luwu Raya</div>
+            </div>
+            <div class="form-group"><label class="form-label">Nama Lengkap</label><input class="form-control" value="Ahmad Mining"></div>
+            <div class="form-group"><label class="form-label">Username</label><input class="form-control" value="admin_mining_a" disabled></div>
+            <button class="btn btn-primary" onclick="showToast('Profil berhasil disimpan')">Simpan Perubahan</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Keamanan</span></div>
+          <div class="card-body">
+            <div class="form-group"><label class="form-label">Password Saat Ini</label><input class="form-control" type="password"></div>
+            <div class="form-group"><label class="form-label">Password Baru</label><input class="form-control" type="password"></div>
+            <div class="form-group"><label class="form-label">Konfirmasi Password Baru</label><input class="form-control" type="password"></div>
+            <button class="btn btn-primary" onclick="showToast('Password berhasil diubah')">Ubah Password</button>
+            <div class="divider"></div>
+            <div style="font-size:13px;color:var(--text-secondary)">
+              <div style="font-weight:600;margin-bottom:6px">Session Aktif</div>
+              <div style="display:flex;justify-content:space-between;font-size:12px">
+                <span>Login terakhir: 07 Jun · 06:01</span>
+                <a href="../pages/login.html" style="color:#DC2626;font-weight:500">Logout</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL: Add User -->
+<div class="modal-overlay" id="addUserModal">
+  <div class="modal modal-md">
+    <div class="modal-header"><span class="modal-title">Tambah / Edit User</span><button class="modal-close" onclick="closeModal('addUserModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row col-2">
+        <div class="form-group"><label class="form-label">Nama Lengkap <span class="req">*</span></label><input class="form-control" placeholder="Nama lengkap"></div>
+        <div class="form-group"><label class="form-label">Username <span class="req">*</span></label><input class="form-control" placeholder="username" style="font-family:monospace"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Password Awal <span class="req">*</span></label><input class="form-control" type="password" placeholder="Min. 8 karakter"><div class="form-hint">User dapat mengubah password setelah login pertama</div></div>
+      <div class="form-section-title mt-16">Assign Branch & Role</div>
+      <div id="branchAssignList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addUserModal')">Batal</button>
+      <button class="btn btn-primary" onclick="closeModal('addUserModal');showToast('User berhasil disimpan')">Simpan User</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Branch -->
+<div class="modal-overlay" id="addBranchModal">
+  <div class="modal modal-md">
+    <div class="modal-header"><span class="modal-title">Tambah / Edit Branch</span><button class="modal-close" onclick="closeModal('addBranchModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row col-2">
+        <div class="form-group"><label class="form-label">Nama Branch <span class="req">*</span></label><input class="form-control" placeholder="Project CLM Luwu Raya"></div>
+        <div class="form-group"><label class="form-label">Kode Branch <span class="req">*</span></label><input class="form-control" placeholder="KAL-A" style="font-family:monospace"><div class="form-hint">Digunakan sebagai prefix No. Rit (contoh: KAL-A-20260607-001)</div></div>
+      </div>
+      <div class="form-group"><label class="form-label">Lokasi / Alamat</label><input class="form-control" placeholder="Kalimantan Timur"></div>
+      <div class="form-group">
+        <label class="form-label">Skema Ritase <span class="req">*</span></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+          <label style="border:2px solid var(--brown-dark);border-radius:8px;padding:12px;cursor:pointer;background:rgba(107,79,53,0.05)">
+            <input type="radio" name="skema" value="with" checked style="accent-color:var(--brown-dark)">
+            <div style="font-weight:600;font-size:13px;margin-top:4px">WITH_TIMBANGAN</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Pit → Timbang IN → Stockpile → Timbang OUT. Netto = Gross − Tare.</div>
+          </label>
+          <label style="border:1px solid var(--border);border-radius:8px;padding:12px;cursor:pointer">
+            <input type="radio" name="skema" value="without" style="accent-color:var(--brown-dark)">
+            <div style="font-weight:600;font-size:13px;margin-top:4px">WITHOUT_TIMBANGAN</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Netto = kapasitas unit × faktor muatan dari konfigurasi estimasi.</div>
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Shift yang Aktif <span class="req">*</span></label>
+        <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap">
+          <label class="checkbox-row"><input type="checkbox" checked style="accent-color:var(--brown-dark)"> Steady Day</label>
+          <label class="checkbox-row"><input type="checkbox" checked style="accent-color:var(--brown-dark)"> Shift Pagi</label>
+          <label class="checkbox-row"><input type="checkbox" checked style="accent-color:var(--brown-dark)"> Shift Siang</label>
+          <label class="checkbox-row"><input type="checkbox" checked style="accent-color:var(--brown-dark)"> Shift Malam</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addBranchModal')">Batal</button>
+      <button class="btn btn-primary" onclick="closeModal('addBranchModal');showToast('Branch berhasil disimpan')">Simpan Branch</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+document.getElementById('sidebarContainer').innerHTML = renderSidebar('settings');
+document.getElementById('topbarContainer').innerHTML = renderTopbar('Pengaturan Sistem');
+
+// Users — updated with new roles
+const users=[
+  {n:'Ahmad Supervisor',u:'supervisor',r:'Supervisor',rCls:'badge-rejected',b:'Kalimantan A, B',login:'07 Jun · 06:01',aktif:true},
+  {n:'Budi Mining',u:'admin_mining_a1',r:'Admin Mining',rCls:'badge-pagi',b:'Kalimantan A',login:'07 Jun · 06:05',aktif:true},
+  {n:'Citra Mining',u:'admin_mining_a2',r:'Admin Mining',rCls:'badge-pagi',b:'Kalimantan A',login:'07 Jun · 07:02',aktif:true},
+  {n:'Dedi General',u:'general_admin_a',r:'General Admin',rCls:'badge-siang',b:'Kalimantan A',login:'07 Jun · 06:00',aktif:true},
+  {n:'Eka Mining',u:'admin_mining_b',r:'Admin Mining',rCls:'badge-pagi',b:'Kalimantan B',login:'07 Jun · 06:10',aktif:true},
+  {n:'Faisal Viewer',u:'manager1',r:'Viewer',rCls:'badge-manual',b:'Kalimantan A, B',login:'06 Jun · 17:30',aktif:true},
+  {n:'Galih Mining',u:'admin_mining_a3',r:'Admin Mining',rCls:'badge-pagi',b:'Kalimantan A',login:'05 Jun · 22:05',aktif:false},
+];
+document.getElementById('usersBody').innerHTML=users.map(r=>{
+  const initials=r.n.split(' ').map(w=>w[0]).slice(0,2).join('');
+  return '<tr>'+
+    '<td><div style="display:flex;align-items:center;gap:8px">'+
+    '<div class="user-avatar" style="width:28px;height:28px;font-size:10px">'+initials+'</div>'+
+    '<strong>'+r.n+'</strong></div></td>'+
+    '<td class="muted" style="font-family:monospace;font-size:11px">'+r.u+'</td>'+
+    '<td><span class="badge '+r.rCls+'" style="font-size:10px">'+r.r+'</span></td>'+
+    '<td class="muted" style="font-size:11px">'+r.b+'</td>'+
+    '<td class="muted" style="font-size:11px">'+r.login+'</td>'+
+    '<td><span class="badge badge-'+(r.aktif?'approved':'rejected')+'">'+(r.aktif?'Aktif':'Nonaktif')+'</span></td>'+
+    '<td><div style="display:flex;gap:4px">'+
+    '<button class="btn btn-ghost btn-sm" onclick="openModal(\'addUserModal\')">✏ Edit</button>'+
+    '<button class="btn btn-ghost btn-sm" style="color:#DC2626" onclick="showToast(\'Password direset\',\'warn\')">🔑</button>'+
+    '</div></td>'+
+    '</tr>';
+}).join('');
+
+// Branches
+const branches=[
+  {n:'Project CLM Luwu Raya',k:'KAL-A',lok:'Kalimantan Timur',skema:'WITH_TIMBANGAN',shift:['pagi','siang','malam'],users:4,aktif:true},
+  {n:'Project NPM Konawe',k:'KAL-B',lok:'Kalimantan Selatan',skema:'WITHOUT_TIMBANGAN',shift:['pagi','siang','malam'],users:2,aktif:true},
+  {n:'Project PPS Sultra',k:'SLW-C',lok:'Morowali, Sulawesi',skema:'WITH_TIMBANGAN',shift:['steady_day'],users:1,aktif:false},
+];
+document.getElementById('branchCards').innerHTML=branches.map(b=>
+  '<div class="card" style="'+(! b.aktif?'opacity:0.6':'')+'">'+
+  '<div class="card-header">'+
+  '<div><div style="font-weight:700;font-size:15px">'+b.n+'</div>'+
+  '<div style="font-size:11px;color:var(--text-muted)">'+b.k+' · '+b.lok+'</div></div>'+
+  '<span class="badge badge-'+(b.aktif?'approved':'rejected')+'">'+(b.aktif?'Aktif':'Nonaktif')+'</span>'+
+  '</div>'+
+  '<div class="card-body">'+
+  '<div style="display:grid;gap:10px">'+
+  '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text-muted)">Skema Ritase</span>'+
+  '<span class="badge badge-'+(b.skema==='WITH_TIMBANGAN'?'imported':'manual')+'">'+b.skema+'</span></div>'+
+  '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text-muted)">Shift Aktif</span>'+
+  '<div style="display:flex;gap:4px">'+b.shift.map(s=>'<span class="badge badge-'+s+'" style="font-size:9px">'+s+'</span>').join('')+'</div></div>'+
+  '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text-muted)">Jumlah User</span>'+
+  '<span><strong>'+b.users+'</strong> user assigned</span></div>'+
+  '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text-muted)">Prefix No. Rit</span>'+
+  '<span class="tag" style="font-family:monospace;font-size:11px">'+b.k+'</span></div>'+
+  '</div>'+
+  '<div class="divider"></div>'+
+  '<div style="display:flex;gap:8px">'+
+  '<button class="btn btn-ghost btn-sm" onclick="openModal(\'addBranchModal\')">✏ Edit Config</button>'+
+  '<button class="btn btn-ghost btn-sm" onclick="showToast(\'Lihat user branch\')">👥 Lihat User</button>'+
+  '</div></div></div>'
+).join('');
+
+// Role definitions
+const roles=[
+  {
+    nama:'Super Admin',
+    warna:'badge-rejected',
+    desc:'Administrator sistem. Akses penuh ke semua branch, semua modul, dan konfigurasi sistem.',
+    akses:['Semua modul tanpa batasan','Kelola branch & konfigurasi global','Kelola semua user','Bypass approval workflow','Akses audit trail lengkap'],
+    catatan:'Hanya 1–2 orang. Jangan diberikan ke staf operasional.'
+  },
+  {
+    nama:'Supervisor',
+    warna:'badge-pending',
+    desc:'Pengawas operasional per branch. Bertugas mereview dan mengapprove data harian.',
+    akses:['Approval shift harian','Approve/reject edit request','View semua data branch yang di-assign','Konfigurasi rate & netto estimasi','Export semua laporan'],
+    catatan:'Tidak bisa input data operasional (SJ, delay, BBM, maintenance).'
+  },
+  {
+    nama:'Admin Mining',
+    warna:'badge-pagi',
+    desc:'Role utama operasional. Menggantikan Admin SJ, Admin Lapangan, Admin BBM, Tim Maintenance, dan Cycle Time dalam 1 role.',
+    akses:['Input Rit Operation (SJ)','Input Delay (fleet & unit)','Input BBM & Maintenance','Import Cycle Time (GPS CSV)','Buka & tutup shift','Generate unit dari kemarin','Submit Edit Request'],
+    catatan:'Bisa lebih dari 1 orang per branch dengan role yang sama. Tidak bisa approval dan tidak bisa akses master data.'
+  },
+  {
+    nama:'General Admin',
+    warna:'badge-siang',
+    desc:'Admin Mining dengan tambahan akses ke master data branch dan konfigurasi. Cocok untuk koordinator lapangan atau kepala regu.',
+    akses:['Semua akses Admin Mining','Kelola master data branch (unit, operator, pit, stockpile)','Konfigurasi netto estimasi & delay budget','Lihat laporan lengkap per branch'],
+    catatan:'Tidak bisa approval shift dan tidak bisa akses konfigurasi sistem global.'
+  },
+  {
+    nama:'Viewer',
+    warna:'badge-manual',
+    desc:'Akses read-only untuk monitoring dan laporan. Cocok untuk manajemen atau pihak klien yang perlu pantau data.',
+    akses:['Lihat dashboard real-time','Akses semua laporan','Export data ke Excel','Tidak bisa input atau mengubah data apapun'],
+    catatan:'Bisa di-assign ke multi-branch untuk konsolidasi view.'
+  },
+];
+document.getElementById('roleCards').innerHTML=roles.map(r=>
+  '<div class="card">'+
+  '<div class="card-header">'+
+  '<div style="display:flex;align-items:center;gap:10px">'+
+  '<span class="badge '+r.warna+'" style="font-size:12px;padding:4px 12px">'+r.nama+'</span>'+
+  '</div>'+
+  '</div>'+
+  '<div class="card-body">'+
+  '<p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">'+r.desc+'</p>'+
+  '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);margin-bottom:6px">Hak Akses</div>'+
+  '<ul style="list-style:none;display:flex;flex-direction:column;gap:4px;margin-bottom:12px">'+
+  r.akses.map(a=>'<li style="font-size:12px;display:flex;gap:6px;align-items:flex-start"><span style="color:#16A34A;flex-shrink:0;margin-top:1px">✓</span>'+a+'</li>').join('')+
+  '</ul>'+
+  '<div style="background:var(--gold-pale);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--gold-dark)">'+
+  '⚠ '+r.catatan+
+  '</div>'+
+  '</div></div>'
+).join('');
+
+// Branch assign in add user modal
+const branchNames=['Kalimantan A','Kalimantan B','Sulawesi Tengah'];
+const roleOptions=['-- Pilih Role --','Supervisor','Admin Mining','General Admin','Viewer'];
+document.getElementById('branchAssignList').innerHTML=branchNames.map((b,i)=>
+  '<div style="background:var(--cream);border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px">'+
+  '<input type="checkbox" '+(i===0?'checked':'')+' style="accent-color:var(--brown-dark)">'+
+  '<span style="font-size:13px;font-weight:500;flex:1">'+b+'</span>'+
+  '<select class="filter-select" style="font-size:12px">'+
+  roleOptions.map((opt,j)=>'<option'+(i===0&&j===3?' selected':'')+'>'+opt+'</option>').join('')+
+  '</select></div>'
+).join('');
+
+function switchSettings(tab){
+  ['users','branches','roles','profile'].forEach(t=>{
+    const el=document.getElementById('tab-'+t);
+    if(el) el.style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('#settingsTabs .tab').forEach(el=>{
+    el.classList.toggle('active',el.getAttribute('data-tab')===tab);
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Hauling Monitor</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    body { display:block; }
+    .login-page { display:flex; min-height:100vh; }
+    .login-left { flex:1; padding:60px; display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(150deg, #3E2D1E 0%, #6B4F35 55%, #9E7B55 100%); position:relative; overflow:hidden; }
+    .login-left::before { content:''; position:absolute; width:500px; height:500px; border-radius:50%; background:radial-gradient(circle, rgba(232,200,74,0.18) 0%, transparent 70%); top:-100px; left:-100px; }
+    .login-left::after { content:''; position:absolute; width:300px; height:300px; border-radius:50%; background:radial-gradient(circle, rgba(232,200,74,0.10) 0%, transparent 70%); bottom:0; right:80px; }
+    .left-top .brand { font-family:'DM Serif Display',serif; font-size:22px; color:var(--gold-pale); display:flex; align-items:center; gap:12px; }
+    .left-center { position:relative; z-index:1; }
+    .left-center h1 { font-family:'DM Serif Display',serif; font-size:48px; color:white; line-height:1.1; margin-bottom:16px; }
+    .left-center h1 em { font-style:italic; color:var(--gold); }
+    .left-center p { color:rgba(196,168,130,0.8); font-size:15px; max-width:400px; line-height:1.7; }
+    .left-features { display:flex; gap:16px; flex-wrap:wrap; }
+    .feature-pill { background:rgba(255,255,255,0.07); border:1px solid rgba(196,168,130,0.2); border-radius:99px; padding:7px 14px; font-size:12px; color:rgba(196,168,130,0.8); display:flex; align-items:center; gap:6px; }
+    .login-right { width:480px; background:var(--cream); display:flex; align-items:center; justify-content:center; padding:48px; }
+    .login-box { width:100%; }
+    .login-box h2 { font-family:'DM Serif Display',serif; font-size:30px; color:var(--text-primary); margin-bottom:6px; }
+    .login-box .sub { color:var(--text-secondary); font-size:13px; margin-bottom:32px; }
+    .input-group { position:relative; margin-bottom:16px; }
+    .input-icon { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:15px; pointer-events:none; }
+    .input-group .form-control { padding-left:40px; padding-right:13px; }
+    .forgot { font-size:12px; color:var(--brown-mid); text-decoration:none; float:right; margin-bottom:20px; }
+    .forgot:hover { color:var(--brown-dark); }
+    .login-btn { width:100%; padding:12px; font-size:14px; font-weight:600; background:var(--brown-dark); color:white; border:none; border-radius:8px; cursor:pointer; transition:all .2s; margin-top:8px; font-family:'DM Sans',sans-serif; letter-spacing:.3px; }
+    .login-btn:hover { background:var(--brown-deep); transform:translateY(-1px); box-shadow:0 4px 14px rgba(62,45,30,0.3); }
+    .divider-or { display:flex; align-items:center; gap:12px; margin:20px 0; color:var(--text-muted); font-size:12px; }
+    .divider-or::before, .divider-or::after { content:''; flex:1; height:1px; background:var(--border); }
+    .demo-accounts { background:white; border-radius:10px; border:1px solid var(--border); overflow:hidden; }
+    .demo-account { padding:10px 14px; cursor:pointer; transition:background .1s; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+    .demo-account:last-child { border-bottom:none; }
+    .demo-account:hover { background:var(--cream); }
+    .demo-role { font-size:11px; font-weight:600; color:var(--brown-dark); }
+    .demo-cred { font-size:11px; color:var(--text-muted); }
+  </style>
+</head>
+<body>
+<div class="login-page">
+  <div class="login-left">
+    <div class="left-top">
+      <div class="brand">
+        <img src="../assets/haulops.png" alt="HAULOPS" style="height:36px;width:auto;display:block">
+        
+      </div>
+    </div>
+    <div class="left-center">
+      <h1>Smart <em>Mining</em><br>Transaction System</h1>
+      <p>Prototype UI Smart Mining BJU, Platform monitoring operasional armada Dump Truck secara terpusat. Multi-branch, real-time, dengan workflow approval yang terstruktur.</p>
+      <div style="height:32px"></div>
+      <div class="left-features">
+        <div class="feature-pill">📊 Real-time Dashboard</div>
+        <div class="feature-pill">🏭 Multi Branch</div>
+        <div class="feature-pill">✅ Approval Workflow</div>
+        <div class="feature-pill">📈 KPI Monitoring</div>
+        <div class="feature-pill">⚖ Dual Ritase Mode</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:rgba(196,168,130,0.3)">© 2026 Hauling Monitor System v1.1 by Logix Team</div>
+  </div>
+
+  <div class="login-right">
+    <div class="login-box">
+      <h2>Selamat Datang</h2>
+      <p class="sub">Masuk ke akun operasional Anda</p>
+
+      <div class="input-group">
+        <span class="input-icon">👤</span>
+        <input class="form-control" type="text" placeholder="Username" id="uname" value="supervisor">
+      </div>
+      <div class="input-group">
+        <span class="input-icon">🔒</span>
+        <input class="form-control" type="password" placeholder="Password" id="pass" value="••••••••">
+      </div>
+      <a href="#" class="forgot">Lupa password?</a>
+      <div class="checkbox-row" style="margin:10px 0 16px">
+        <input type="checkbox" id="remember" checked>
+        <label for="remember">Ingat saya selama 30 hari</label>
+      </div>
+      <button class="login-btn" onclick="doLogin()">Masuk ke Sistem</button>
+
+      <div class="divider-or">Demo Accounts</div>
+      <div class="demo-accounts">
+        <div class="demo-account" onclick="fillLogin('supervisor','pass123')">
+          <span>🎯</span>
+          <div><div class="demo-role">Supervisor</div><div class="demo-cred">supervisor / pass123</div></div>
+        </div>
+        <div class="demo-account" onclick="fillLogin('admin_sj','pass123')">
+          <span>📋</span>
+          <div><div class="demo-role">Admin SJ</div><div class="demo-cred">admin_sj / pass123</div></div>
+        </div>
+        <div class="demo-account" onclick="fillLogin('admin_lap','pass123')">
+          <span>🏔</span>
+          <div><div class="demo-role">Admin Lapangan</div><div class="demo-cred">admin_lap / pass123</div></div>
+        </div>
+        <div class="demo-account" onclick="fillLogin('maintenance','pass123')">
+          <span>🔧</span>
+          <div><div class="demo-role">Tim Maintenance</div><div class="demo-cred">maintenance / pass123</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function fillLogin(u,p) {
+  document.getElementById('uname').value = u;
+  document.getElementById('pass').value = p;
+}
+function doLogin() {
+  const u = document.getElementById('uname').value;
+  const btn = document.querySelector('.login-btn');
+  btn.textContent = 'Masuk...';
+  btn.style.opacity = '0.7';
+  setTimeout(() => {
+    window.location.href = '../pages/dashboard.html';
+  }, 800);
+}
+</script>
+</body>
+</html>

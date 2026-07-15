@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cycle Time — HAULOPS</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="main-wrapper">
+  <div id="topbarContainer"></div>
+  <main class="page-content">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;gap:16px">
+      <div style="font-size:48px;opacity:0.5">⏸️</div>
+      <h2 style="color:var(--text-muted);margin:0">Modul Cycle Time Sedang Di-Hold</h2>
+      <p style="color:var(--text-muted);font-size:14px;max-width:480px">Fitur ini masih dalam tahap pengembangan dan akan tersedia pada rilis berikutnya.</p>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <span class="badge" style="background:#eee;color:#888;padding:4px 12px">GPS Import</span>
+        <span class="badge" style="background:#eee;color:#888;padding:4px 12px">Manual Input</span>
+        <span class="badge" style="background:#eee;color:#888;padding:4px 12px">Analisis Pit</span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+document.getElementById('sidebarContainer').innerHTML = renderSidebar('cycle_time');
+document.getElementById('topbarContainer').innerHTML = renderTopbar('Cycle Time');
+
+// Suggestions
+const suggestions=[
+  {icon:'🗺️',title:'Breakdown per Segmen',desc:'Tambah field waktu per segmen: loading, hauling loaded, dumping, hauling empty, queuing'},
+  {icon:'📍',title:'Analisis per Pit',desc:'Cycle time per pit berbeda karena jarak dan kondisi jalan — penting untuk planning'},
+  {icon:'⚠️',title:'Deteksi Anomali',desc:'Flag otomatis trip dengan CT > 2x rata-rata (kemungkinan breakdown, antri, atau data error)'},
+  {icon:'📈',title:'Trend Harian',desc:'Chart perbandingan avg CT per shift per hari untuk melihat degradasi performa'},
+  {icon:'🔗',title:'Link ke Rit Operation',desc:'Setiap record CT di-link ke No. Rit untuk analisis korelasi CT vs tonase'},
+  {icon:'🏔️',title:'Analisis Kondisi Jalan',desc:'Tambah field kondisi jalan saat input manual (kering/basah/licin) untuk analisis musim'},
+];
+document.getElementById('suggestionGrid').innerHTML=suggestions.map(s=>
+  '<div style="background:white;border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;gap:8px">'+
+  '<span style="font-size:16px;flex-shrink:0">'+s.icon+'</span>'+
+  '<div><div style="font-size:11px;font-weight:600;color:var(--text-primary)">'+s.title+'</div>'+
+  '<div style="font-size:10px;color:var(--text-muted);margin-top:2px">'+s.desc+'</div></div>'+
+  '</div>'
+).join('');
+
+// KPI
+const ctKpiData=[
+  {label:'Avg Cycle Time',value:'38',unit:'mnt',badge:'↑ 4 mnt vs normal',badgeType:'warn',icon:'🔁',iconBg:'gold'},
+  {label:'Min Cycle Time',value:'28',unit:'mnt',sub:'DT-006 · Trip ke-14',icon:'⬇',iconBg:'brown'},
+  {label:'Max Cycle Time',value:'58',unit:'mnt',sub:'DT-004 · (antrian)',icon:'⬆',iconBg:'amber'},
+  {label:'Total Trip Recorded',value:'247',unit:'trip',sub:'GPS import',icon:'📊',iconBg:'green'},
+];
+document.getElementById('ctKpi').innerHTML=ctKpiData.map(k=>
+  '<div class="stat-card '+(k.iconBg==='gold'?'gold':'')+'">'+
+  '<div class="stat-icon '+k.iconBg+'">'+k.icon+'</div>'+
+  '<div class="stat-label">'+k.label+'</div>'+
+  '<div class="stat-value">'+k.value+' <span style="font-size:14px;color:var(--text-muted)">'+k.unit+'</span></div>'+
+  (k.badge?'<div class="stat-sub"><span class="stat-badge '+k.badgeType+'">'+k.badge+'</span></div>':'')+ (k.sub?'<div class="stat-sub">'+k.sub+'</div>':'')+
+  '</div>'
+).join('');
+
+// CT Components breakdown
+const ctComps=[
+  {label:'Muat di Pit (Loading)',mnt:8,color:'#5B7FCB'},
+  {label:'Hauling Bermuatan',mnt:12,color:'#E09640'},
+  {label:'Antrian Timbangan',mnt:4,color:'#C85858'},
+  {label:'Proses Timbang',mnt:3,color:'#9B6CC8'},
+  {label:'Dumping di Stockpile',mnt:4,color:'#7AB87A'},
+  {label:'Hauling Kosong',mnt:7,color:'#888'},
+];
+const totalMnt=ctComps.reduce((a,b)=>a+b.mnt,0);
+document.getElementById('ctComponents').innerHTML=ctComps.map(c=>
+  '<div style="margin-bottom:10px">'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+  '<div style="font-size:12px;display:flex;align-items:center;gap:6px">'+
+  '<span style="width:10px;height:10px;border-radius:2px;background:'+c.color+';display:inline-block;flex-shrink:0"></span>'+
+  c.label+'</div>'+
+  '<span style="font-size:12px;font-weight:600">'+c.mnt+' mnt <span style="color:var(--text-muted);font-weight:400">('+Math.round(c.mnt/totalMnt*100)+'%)</span></span>'+
+  '</div>'+
+  '<div class="progress-bar-wrap"><div class="progress-bar" style="width:'+Math.round(c.mnt/totalMnt*100)+'%;background:'+c.color+'"></div></div>'+
+  '</div>'
+).join('')+
+'<div style="text-align:right;font-size:12px;color:var(--text-muted);margin-top:8px;border-top:1px solid var(--border);padding-top:8px">Total: <strong>'+totalMnt+' mnt avg per trip</strong></div>';
+
+// CT per pit
+const ctPit=[
+  {pit:'Pit A1',mat:'Nikel ORE',avg:34,target:34,unit:3},
+  {pit:'Pit A2',mat:'Nikel ORE',avg:36,target:34,unit:2},
+  {pit:'Pit A3',mat:'Nikel ORE',avg:39,target:34,unit:2},
+  {pit:'Pit B1',mat:'Nikel OB',avg:42,target:34,unit:2},
+];
+document.getElementById('ctPerPit').innerHTML=ctPit.map(p=>{
+  const over=p.avg>p.target;
+  return '<div style="margin-bottom:12px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'+
+    '<div style="font-size:12px;font-weight:500">'+p.pit+' <span class="badge badge-manual" style="font-size:9px">'+p.mat+'</span></div>'+
+    '<span class="badge badge-'+(over?'over':'ok')+'">'+p.avg+' mnt</span>'+
+    '</div>'+
+    '<div class="progress-bar-wrap"><div class="progress-bar '+(over?'red':'green')+'" style="width:'+Math.min(p.avg/50*100,100)+'%"></div></div>'+
+    '<div style="font-size:10px;color:var(--text-muted);margin-top:2px">'+p.unit+' unit · Target 34 mnt</div>'+
+    '</div>';
+}).join('');
+
+// Import history
+const importHistory=[
+  {tgl:'07 Jun 2026 · 14:05',file:'cycle_time_07jun_pagi.csv',branch:'Kalimantan A',shift:'pagi',total:247,ok:245,fail:2,by:'Admin Mining'},
+  {tgl:'06 Jun 2026 · 22:18',file:'cycle_time_06jun_siang.csv',branch:'Kalimantan A',shift:'siang',total:328,ok:328,fail:0,by:'Admin Mining'},
+  {tgl:'06 Jun 2026 · 14:10',file:'cycle_time_06jun_pagi.csv',branch:'Kalimantan A',shift:'pagi',total:298,ok:296,fail:2,by:'Admin Mining'},
+];
+document.getElementById('importHistoryBody').innerHTML=importHistory.map(r=>
+  '<tr>'+
+  '<td class="muted">'+r.tgl+'</td>'+
+  '<td style="font-size:12px;font-weight:500">'+r.file+'</td>'+
+  '<td><span class="tag" style="font-size:10px">'+r.branch+'</span></td>'+
+  '<td><span class="badge badge-'+r.shift+'" style="font-size:9px">'+r.shift+'</span></td>'+
+  '<td class="tnum">'+r.total+'</td>'+
+  '<td class="tnum text-success"><strong>'+r.ok+'</strong></td>'+
+  '<td class="tnum '+(r.fail>0?'text-danger':'text-muted')+'">'+r.fail+'</td>'+
+  '<td class="muted">'+r.by+'</td>'+
+  '</tr>'
+).join('');
+
+// CT per unit
+const ctUnits=[
+  {u:'DT-001',tipe:'DT Kecil',pit:'Pit A1',mat:'Nikel ORE',trip:18,min:31,max:48,avg:38},
+  {u:'DT-002',tipe:'DT Kecil',pit:'Pit A2',mat:'Nikel ORE',trip:21,min:29,max:44,avg:35},
+  {u:'DT-003',tipe:'DT Kecil',pit:'Pit A3',mat:'Nikel ORE',trip:16,min:33,max:52,avg:41},
+  {u:'DT-004',tipe:'DT Besar',pit:'Pit B1',mat:'Nikel OB',trip:8,min:35,max:58,avg:47},
+  {u:'DT-005',tipe:'DT Kecil',pit:'Pit B1',mat:'Nikel OB',trip:16,min:38,max:54,avg:43},
+  {u:'DT-006',tipe:'DT Kecil',pit:'Pit A2',mat:'Nikel ORE',trip:22,min:28,max:42,avg:34},
+  {u:'DT-007',tipe:'DT Besar',pit:'—',mat:'—',trip:0,min:null,max:null,avg:null},
+  {u:'DT-008',tipe:'DT Kecil',pit:'Pit A3',mat:'Nikel ORE',trip:20,min:32,max:47,avg:39},
+];
+const TARGET=34;
+document.getElementById('ctUnitBody').innerHTML=ctUnits.map(r=>{
+  const isNA=r.avg===null;
+  const diff=isNA?null:r.avg-TARGET;
+  const badge=isNA?'<span class="text-muted">N/A</span>':
+    '<span class="badge badge-'+(diff<=0?'ok':'over')+'">'+
+    (diff<=0?'▼ '+Math.abs(diff)+' mnt lebih cepat':'▲ '+diff+' mnt lebih lambat')+
+    '</span>';
+  return '<tr>'+
+    '<td><span class="tag">'+r.u+'</span></td>'+
+    '<td class="muted" style="font-size:11px">'+r.tipe+'</td>'+
+    '<td class="muted" style="font-size:11px">'+r.pit+'</td>'+
+    '<td><span class="badge badge-manual" style="font-size:9px">'+r.mat+'</span></td>'+
+    '<td class="tnum">'+r.trip+'</td>'+
+    '<td class="tnum muted">'+(r.min?r.min+' mnt':'—')+'</td>'+
+    '<td class="tnum muted">'+(r.max?r.max+' mnt':'—')+'</td>'+
+    '<td class="tnum"><strong>'+(r.avg?r.avg+' mnt':'—')+'</strong></td>'+
+    '<td>'+badge+'</td>'+
+    '</tr>';
+}).join('');
+
+// CSV mapping
+document.getElementById('csvMapping').innerHTML=[
+  ['Kolom Truck ID','Kode Unit (matching ke master data)'],
+  ['Kolom Start Time','Jam Mulai Cycle (datetime)'],
+  ['Kolom End Time','Jam Selesai Cycle (datetime)'],
+  ['Kolom Duration','Durasi (menit)'],
+  ['Kolom Pit ID (opsional)','Kode Pit untuk analisis per rute'],
+].map(([a,c])=>
+  '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px">'+
+  '<span style="color:var(--text-muted);width:180px">'+a+'</span>'+
+  '<span style="color:var(--brown-light)">→</span>'+
+  '<span style="font-weight:500">'+c+'</span>'+
+  '</div>'
+).join('');
+</script>
+</body>
+</html>

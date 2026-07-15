@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Summary Operations — HAULOPS</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <style>
+    * { box-sizing: border-box; }
+
+    .so-container { overflow: hidden; position: relative; }
+    .so-header-row { display: flex; border-bottom: 2px solid #1F6B3A; position: sticky; top: 0; z-index: 10; }
+    .so-header-cell {
+      flex: 0 0 auto; padding: 8px 6px; background: #1F6B3A; color: #fff;
+      font-size: 10px; font-weight: 700; text-align: center; white-space: nowrap;
+      border-right: 1px solid rgba(255,255,255,0.15); min-height: 40px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .so-header-cell:last-child { border-right: none; }
+    .so-header-cell.label { flex: 0 0 220px; position: sticky; left: 0; z-index: 12; text-align: left; justify-content: flex-start; padding-left: 12px; }
+    .so-header-cell.total { flex: 0 0 110px; position: sticky; right: 0; z-index: 12; border-left: 3px solid #fff; }
+    .so-header-cell.date { flex: 0 0 62px; }
+    .so-header-cell.today { box-shadow: inset 0 0 0 2px #60A5FA; }
+
+    /* Scrollable body wrapper */
+    .so-body-wrap { overflow: auto; max-height: calc(100vh - 280px); position: relative; }
+
+    /* Section label bar */
+    .so-section-row { display: flex; background: var(--cream-deep); border-bottom: 1px solid var(--border); }
+    .so-section-label {
+      flex: 0 0 220px; position: sticky; left: 0; z-index: 5;
+      padding: 6px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+      color: var(--brown-dark); background: var(--cream-deep); border-right: 1px solid var(--border);
+    }
+
+    /* Metric rows */
+    .so-row { display: flex; border-bottom: 1px solid var(--border); transition: background .1s; }
+    .so-row:hover { background: var(--bg-hover); }
+    .so-row.plan-row .so-cell { color: var(--text-muted); }
+    .so-row.ach-row .so-cell { font-weight: 600; }
+
+    .so-cell {
+      flex: 0 0 62px; padding: 6px 4px; font-size: 11px; text-align: right;
+      border-right: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: flex; align-items: center; justify-content: flex-end; min-height: 30px;
+    }
+    .so-cell.label { flex: 0 0 220px; position: sticky; left: 0; z-index: 3; background: #fff; text-align: left; justify-content: flex-start; padding-left: 12px; font-size: 12px; font-weight: 500; border-right: 2px solid var(--border); }
+    .so-row:hover .so-cell.label { background: var(--bg-hover); }
+    .so-cell.total { flex: 0 0 110px; position: sticky; right: 0; z-index: 3; background: var(--cream-light); border-left: 2px solid var(--border); font-weight: 700; }
+    .so-row:hover .so-cell.total { background: var(--bg-hover); }
+    .so-cell.ach-green { background: #C8E6D5; color: #1B5E20; }
+    .so-cell.ach-red { background: #F8D0D3; color: #B71C1C; }
+    .so-cell.ach-zero { background: #E53935; color: #fff; position: relative; }
+    .so-cell.ach-zero::after { content: '⚠'; position: absolute; top: 1px; right: 2px; font-size: 9px; }
+    .so-cell.data-missing { border: 2px solid #EF4444; }
+    .so-cell.icon-cell { font-size: 14px; justify-content: center; padding: 0; }
+
+    /* Badge */
+    .delay-badge { display: inline-block; background: #F59E0B; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 6px; vertical-align: middle; cursor: help; }
+
+    /* Filter bar */
+    .filter-bar { display: flex; gap: 12px; padding: 12px 0; align-items: end; flex-wrap: wrap; }
+    .filter-bar .form-group { margin-bottom: 0; min-width: 130px; }
+    .filter-bar .form-label { font-size: 10px; }
+
+    /* KPI cards row */
+    .kpi-strip { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+          .kpi-strip .stat-card { flex: 1; min-width: 160px; }
+
+    /* Section 9A — 3 blok */
+    .so-mtd-wrap { display: flex; gap: 16px; margin-bottom: 20px; align-items: stretch; }
+    .so-mtd-block { border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); background: #fff; }
+    .so-mtd-block.summary { flex: 22; min-width: 0; }
+    .so-mtd-block.target { flex: 28; min-width: 0; }
+    .so-mtd-block.chart { flex: 50; min-width: 0; }
+
+    .so-mtd-header { padding: 10px 14px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #fff; }
+    .so-mtd-header.green { background: #1F6B3A; }
+    .so-mtd-header.amber { background: var(--amber); }
+
+    .so-mtd-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .so-mtd-table th { padding: 6px 8px; text-align: center; font-weight: 600; color: #fff; font-size: 9px; text-transform: uppercase; letter-spacing: .4px; border-right: 1px solid rgba(255,255,255,0.15); }
+    .so-mtd-table th:last-child { border-right: none; }
+    .so-mtd-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--border); }
+    .so-mtd-table tr:last-child td { border-bottom: none; }
+    .so-mtd-table .label-cell { text-align: left; font-weight: 600; background: #E8F0E8; padding-left: 12px; }
+    .so-mtd-table .spacer td { height: 6px; border-bottom: none; background: transparent; }
+    .so-mtd-table .total-row td { border-top: 2px solid var(--border); font-weight: 700; }
+    .so-mtd-table .ach-cell.ach-green { background: #C8E6D5; color: #1B5E20; font-weight: 700; }
+    .so-mtd-table .ach-cell.ach-red { background: #F8D0D3; color: #B71C1C; font-weight: 700; }
+    .so-mtd-table .ach-cell.ach-zero { background: #E53935; color: #fff; }
+    .so-mtd-table .empty-cell { background: #fff; }
+
+    .so-mtd-table .val-right { text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* Chart area */
+    .so-chart-wrap { padding: 12px; position: relative; }
+    .so-chart-title { font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+    .so-chart-legend { position: absolute; top: 12px; right: 12px; display: flex; gap: 12px; font-size: 10px; }
+    .so-chart-legend span { display: flex; align-items: center; gap: 4px; }
+    .so-chart-legend .dot { width: 10px; height: 3px; border-radius: 2px; display: inline-block; }
+    .so-chart-svg { width: 100%; height: 120px; display: block; }
+
+    /* Responsive stack for 9A */
+    @media (max-width: 900px) {
+      .so-mtd-wrap { flex-direction: column; }
+      .so-mtd-block.summary,
+      .so-mtd-block.target,
+      .so-mtd-block.chart { flex: none; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="main-wrapper">
+  <div id="topbarContainer"></div>
+  <main class="page-content">
+
+    <!-- Page Header -->
+    <div class="page-header" style="margin-bottom:8px">
+      <div class="page-header-left">
+        <h1 style="font-size:18px">Summary Operations &amp; Jam Kerja</h1>
+        <p style="font-size:12px;color:var(--text-muted)" id="soSubtitle">Rekap harian Aktual vs Plan — Juni 2026, Project NPM Konawe</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline btn-sm" onclick="showToast('Export Excel (dummy — akan diimplementasikan)')">⬇ Export Excel</button>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="form-group"><label class="form-label">Branch</label>
+        <select class="form-control" id="soBranch" onchange="renderSO()">
+          <option>Project NPM Konawe</option>
+          <option>Project CLM Luwu Raya</option>
+          <option>Project PPS Sultra</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Bulan</label>
+        <select class="form-control" id="soBulan" onchange="renderSO()">
+          <option>Januari</option><option>Februari</option><option>Maret</option>
+          <option>April</option><option>Mei</option><option selected>Juni</option>
+          <option>Juli</option><option>Agustus</option><option>September</option>
+          <option>Oktober</option><option>November</option><option>Desember</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Tahun</label>
+        <select class="form-control" id="soTahun" onchange="renderSO()">
+          <option>2025</option><option selected>2026</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Section 9A — Ringkasan MTD & Target Bulanan -->
+    <div class="so-mtd-wrap" id="soMtdWrap"></div>
+
+    <!-- KPI Strip -->
+    <div class="kpi-strip" id="soKpi"></div>
+
+    <!-- Grid Container -->
+    <div class="card so-container" style="overflow:hidden">
+      <div id="soGrid"></div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+document.getElementById('sidebarContainer').innerHTML = renderSidebar('summary_ops');
+document.getElementById('topbarContainer').innerHTML = renderTopbar('Summary Operations');
+
+// ─── Constants ──────────────────────────────────────────────────
+const BRANCHES_SO = ['Project NPM Konawe', 'Project CLM Luwu Raya', 'Project PPS Sultra'];
+const MONTH_DAYS = [31,28,31,30,31,30,31,31,30,31,30,31];
+const MONTH_NAMES = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const JAM_TEMPAT_TIDUR = 20; // 20 jam tersedia per hari (2 shift × 10 jam)
+
+// ─── Mock Data Generator ────────────────────────────────────────
+// Returns array [day1..dayN] each with all metrics
+function buildMockData(bulan, tahun) {
+  const bulanIdx = MONTH_NAMES.indexOf(bulan);
+  const days = MONTH_DAYS[bulanIdx];
+  const data = [];
+  for (let d = 1; d <= days; d++) {
+    const base = d + (bulanIdx * 3); // vary by day & month for realism
+    // Seed production: dip tren naik mingguan, turun di weekend
+    const isWeekend = (d % 7 === 0 || d % 7 === 6);
+    const prodAktual = isWeekend ? Math.round(800 + Math.random() * 400) : Math.round(1200 + Math.random() * 600);
+    const prodPlan = 1133; // 34000/30
+    const dtAktual = isWeekend ? 10 + Math.floor(Math.random() * 3) : 13 + Math.floor(Math.random() * 2);
+    const dtPlan = 14;
+    const jamTersedia = dtAktual * JAM_TEMPAT_TIDUR;
+    const breakdown = Math.round(10 + Math.random() * 30);
+    const rain = Math.round(Math.random() * 60);
+    const noDriver = Math.round(Math.random() * 20);
+    const dtk = Math.round(Math.random() * 5); // Delay Tanpa Ket — seharusnya 0 (simulasi kecil)
+    const istirahat = Math.round(15 + Math.random() * 15);
+    const changeShift = Math.round(10 + Math.random() * 10);
+    const p5m = Math.round(5 + Math.random() * 20);
+    const sunday = d % 7 === 0 ? 600 : 0; // Sunday full standby
+    const totalStandby = rain + noDriver + dtk + istirahat + changeShift + p5m + sunday;
+    const availHours = jamTersedia - breakdown;
+    const ewh = Math.max(0, availHours - totalStandby);
+    const pa = availHours / jamTersedia;
+    const ua = jamTersedia > breakdown ? ewh / availHours : 0;
+
+    data.push({
+      day: d, isWeekend,
+      prod: { a: prodAktual, p: prodPlan },
+      dt: { a: dtAktual, p: dtPlan },
+      pa: { a: Math.round(pa * 1000) / 1000, p: 0.870 },
+      ua: { a: Math.round(ua * 1000) / 1000, p: 0.740 },
+      jamTersedia: { a: jamTersedia, p: dtPlan * JAM_TEMPAT_TIDUR },
+      ewh: { a: Math.round(ewh * 10) / 10, p: Math.round(200 + Math.random() * 30) },
+      breakdown: { a: breakdown, p: 24 },
+      totalStandby: { a: totalStandby, p: 90 },
+      rain: { a: rain, p: 45 },
+      noDriver: { a: noDriver, p: 15 },
+      dtk: { a: dtk, p: 0 },
+      istirahat: { a: istirahat, p: 30 },
+      changeShift: { a: changeShift, p: 20 },
+      p5m: { a: p5m, p: 25 },
+      sunday: { a: sunday, p: 0 },
+    });
+  }
+  return { days, data };
+}
+
+function sumDays(arr, field, sub) {
+  return arr.reduce((s, d) => s + (d[field] ? (d[field][sub] || 0) : 0), 0);
+}
+
+// ─── Render Functions ──────────────────────────────────────────
+function formatRupiah(n) {
+  return 'Rp ' + n.toLocaleString('id-ID');
+}
+
+function renderSO() {
+  const branch = document.getElementById('soBranch').value;
+  const bulan = document.getElementById('soBulan').value;
+  const tahun = document.getElementById('soTahun').value;
+  document.getElementById('soSubtitle').textContent = 'Rekap harian Aktual vs Plan — ' + bulan + ' ' + tahun + ', ' + branch;
+
+  const { days, data } = buildMockData(bulan, tahun);
+  renderSection9A(data, days);
+  renderKpi(data);
+  renderGrid(data, days, bulan, tahun);
+  renderChart(data, days);
+}
+
+function renderSection9A(data, days) {
+  // Aggregate MTD
+  const sumOB = data.filter(d => d.day <= 15).reduce((s, d) => s + Math.round(d.prod.a * 0.4), 0);
+  const sumORE = data.filter(d => d.day <= 15).reduce((s, d) => s + Math.round(d.prod.a * 0.6), 0);
+  const planOB = data.filter(d => d.day <= 15).length * Math.round(data[0].prod.p * 0.4);
+  const planORE = data.filter(d => d.day <= 15).length * Math.round(data[0].prod.p * 0.6);
+  const achOB = planOB > 0 ? (sumOB / planOB * 100) : 0;
+  const achORE = planORE > 0 ? (sumORE / planORE * 100) : 0;
+  const avgPA = data.filter(d => d.day <= 15).reduce((s, d) => s + d.pa.a, 0) / Math.min(15, data.length);
+  const avgUA = data.filter(d => d.day <= 15).reduce((s, d) => s + d.ua.a, 0) / Math.min(15, data.length);
+
+  // Barging mock
+  const bargeHGO = { a: 12500, p: null };
+  const bargeLGO = { a: 8700, p: null };
+
+  // Target Revenue
+  const revPlan = 1995123013;
+  const revAktual = data.reduce((s, d) => s + Math.round(d.prod.a * 152000), 0);
+
+  const achCell = (v, p) => {
+    if (p === null || p === undefined || p === 0) return '<td class="empty-cell"></td>';
+    const ach = (v / p) * 100;
+    let cls = 'ach-cell';
+    if (ach >= 100) cls += ' ach-green';
+    else if (ach > 0 && ach < 70) cls += ' ach-red';
+    else if (ach === 0) cls += ' ach-zero';
+    return '<td class="' + cls + '">' + ach.toFixed(1) + '%</td>';
+  };
+
+  const planTd = (v) => '<td class="val-right' + (v === null || v === undefined ? ' empty-cell' : '') + '">' + (v !== null && v !== undefined ? v.toLocaleString('id-ID') : '') + '</td>';
+  const aktTd = (v) => '<td class="val-right">' + (v !== null && v !== undefined ? v.toLocaleString('id-ID') : '') + '</td>';
+
+  document.getElementById('soMtdWrap').innerHTML =
+    // Blok 1 — Summary MTD
+    '<div class="so-mtd-block summary">' +
+    '<div class="so-mtd-header green">SUMMARY MTD</div>' +
+    '<table class="so-mtd-table">' +
+    '<thead><tr><th style="text-align:left;padding-left:12px">Item</th><th>PLAN</th><th>AKTUAL</th><th>ACH%</th></tr></thead>' +
+    '<tbody>' +
+    '<tr><td class="label-cell">OB</td>' + planTd(planOB) + aktTd(sumOB) + achCell(sumOB, planOB) + '</tr>' +
+    '<tr><td class="label-cell">ORE</td>' + planTd(planORE) + aktTd(sumORE) + achCell(sumORE, planORE) + '</tr>' +
+    '<tr class="spacer"><td colspan="4"></td></tr>' +
+    '<tr><td class="label-cell">Barging HGO</td>' + planTd(null) + aktTd(bargeHGO.a) + achCell(bargeHGO.a, null) + '</tr>' +
+    '<tr><td class="label-cell">Barging LGO</td>' + planTd(null) + aktTd(bargeLGO.a) + achCell(bargeLGO.a, null) + '</tr>' +
+    '<tr class="spacer"><td colspan="4"></td></tr>' +
+    '<tr><td class="label-cell">PA</td>' + planTd(87) + aktTd(Math.round(avgPA * 1000) / 10) + achCell(avgPA, 0.870) + '</tr>' +
+    '<tr><td class="label-cell">UA</td>' + planTd(74) + aktTd(Math.round(avgUA * 1000) / 10) + achCell(avgUA, 0.740) + '</tr>' +
+    '</tbody></table></div>' +
+
+    // Blok 2 — Target Monthly
+    '<div class="so-mtd-block target">' +
+    '<div class="so-mtd-header amber">TARGET MONTHLY</div>' +
+    '<table class="so-mtd-table">' +
+    '<thead><tr><th style="text-align:left;padding-left:12px">DESC</th><th>PLAN</th><th>AKTUAL</th><th>ACH</th></tr></thead>' +
+    '<tbody>' +
+    '<tr><td class="label-cell">Produksi OB</td>' + planTd(Math.round(sumOB / 15 * days)) + aktTd(sumDays(data, 'prod', 'a')) + '<td class="empty-cell"></td></tr>' +
+    '<tr><td class="label-cell">Produksi ORE</td>' + planTd(Math.round(sumORE / 15 * days)) + aktTd(sumDays(data, 'prod', 'a')) + '<td class="empty-cell"></td></tr>' +
+    '<tr><td class="label-cell">Barge HGO</td>' + planTd(null) + aktTd(bargeHGO.a) + '<td class="empty-cell"></td></tr>' +
+    '<tr><td class="label-cell">Barge LGO</td>' + planTd(null) + aktTd(bargeLGO.a) + '<td class="empty-cell"></td></tr>' +
+    '<tr class="total-row"><td class="label-cell">TOTAL REVENUE</td>' + planTd(revPlan) + aktTd(revAktual) + achCell(revAktual, revPlan) + '</tr>' +
+    '</tbody></table></div>' +
+
+    // Blok 3 — Placeholder chart (rendered by renderChart)
+    '<div class="so-mtd-block chart">' +
+    '<div class="so-mtd-header green">Produksi Harian</div>' +
+    '<div class="so-chart-wrap">' +
+    '<div class="so-chart-legend"><span><span class="dot" style="background:#1F6B3A"></span>Plan</span><span><span class="dot" style="background:#94A3B8"></span>Aktual</span></div>' +
+    '<svg class="so-chart-svg" id="soChart"></svg>' +
+    '</div></div>';
+}
+
+function renderChart(data, days) {
+  const svg = document.getElementById('soChart');
+  if (!svg) return;
+  const W = svg.clientWidth || 600;
+  const H = 120;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  const padL = 40, padR = 10, padT = 10, padB = 20;
+  const cw = W - padL - padR;
+  const ch = H - padT - padB;
+  const maxVal = Math.max(...data.map(d => Math.max(d.prod.a, d.prod.p))) * 1.1;
+  const scaleY = (v) => padT + ch - (v / maxVal) * ch;
+  const scaleX = (i) => padL + (i / (days - 1 || 1)) * cw;
+
+  let planD = '', aktD = '';
+  data.forEach((d, i) => {
+    const x = scaleX(i);
+    const yp = scaleY(d.prod.p);
+    const ya = scaleY(d.prod.a);
+    planD += (i === 0 ? 'M' : 'L') + x + ',' + yp;
+    aktD += (i === 0 ? 'M' : 'L') + x + ',' + ya;
+  });
+
+  // Y axis lines
+  let yLines = '';
+  for (let v = 0; v <= maxVal; v += Math.round(maxVal / 4 / 100) * 100 || 100) {
+    const y = scaleY(v);
+    yLines += '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y + '" stroke="#E5E7EB" stroke-width="1"/>';
+    yLines += '<text x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end" font-size="8" fill="#9CA3AF">' + Math.round(v / 1000) + 'k</text>';
+  }
+
+  svg.innerHTML = yLines +
+    '<path d="' + planD + '" fill="none" stroke="#1F6B3A" stroke-width="2"/>' +
+    '<path d="' + aktD + '" fill="none" stroke="#94A3B8" stroke-width="1.5"/>';
+
+  // Tooltip on hover
+  svg.style.cursor = 'crosshair';
+  svg.onmousemove = function(e) {
+    const rect = svg.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const dayIdx = Math.round((mx - padL) / cw * (days - 1));
+    if (dayIdx < 0 || dayIdx >= data.length) return;
+    const d = data[dayIdx];
+    svg.setAttribute('title', 'Tanggal ' + (dayIdx + 1) + ': Plan ' + d.prod.p.toLocaleString() + ' ton, Aktual ' + d.prod.a.toLocaleString() + ' ton, Selisih ' + (d.prod.a - d.prod.p).toLocaleString());
+  };
+}
+
+function renderKpi(data) {
+  const totalProd = sumDays(data, 'prod', 'a');
+  const totalProdP = sumDays(data, 'prod', 'p');
+  const achProd = totalProdP > 0 ? (totalProd / totalProdP * 100).toFixed(1) : '0';
+  const totalUaA = data.reduce((s, d) => s + d.ua.a, 0);
+  const achUa = (totalUaA / data.length / 0.740 * 100).toFixed(1);
+  const hariKosong = data.filter(d => d.prod.a === 0 && d.prod.p > 0).length;
+  const totalDtk = sumDays(data, 'dtk', 'a');
+
+  document.getElementById('soKpi').innerHTML = [
+    { label: 'Achievement Produksi', value: achProd + '%', sub: 'dari target ' + totalProdP.toLocaleString() + ' ton', icon: '📊', cls: parseFloat(achProd) >= 100 ? 'gold' : '' },
+    { label: 'Achievement UA', value: achUa + '%', sub: 'rata-rata harian', icon: '📈', cls: parseFloat(achUa) >= 74 ? 'gold' : '' },
+    { label: 'Hari Aktual = 0', value: hariKosong.toString(), sub: 'hari dengan data kosong', icon: '🚫', cls: hariKosong > 0 ? '' : '' },
+    { label: 'Delay Tanpa Ket.', value: totalDtk.toFixed(0) + ' mnt', sub: 'harusnya 0 — flag jika > 0', icon: '⚠', cls: totalDtk > 0 ? '' : '' },
+  ].map(k =>
+    '<div class="stat-card ' + k.cls + '">' +
+    '<div class="stat-icon' + (k.cls ? ' gold' : '') + '">' + k.icon + '</div>' +
+    '<div class="stat-label">' + k.label + '</div>' +
+    '<div class="stat-value big" style="font-size:18px">' + k.value + ' <span style="font-size:11px;color:var(--text-muted)">' + k.sub + '</span></div>' +
+    '</div>'
+  ).join('');
+}
+
+function renderGrid(data, days, bulan, tahun) {
+  const today = new Date();
+  const isCurrentMonth = MONTH_NAMES.indexOf(bulan) === today.getMonth() && parseInt(tahun) === today.getFullYear();
+  const todayDate = today.getDate();
+
+  let html = '';
+
+  // ── Header ──
+  html += '<div class="so-header-row">';
+  html += '<div class="so-header-cell label">Item</div>';
+  for (let d = 1; d <= days; d++) {
+    const cls = (isCurrentMonth && d === todayDate) ? ' date today' : ' date';
+    html += '<div class="so-header-cell' + cls + '">' + d + '</div>';
+  }
+  html += '<div class="so-header-cell total">' + bulan.toUpperCase().slice(0,3) + ' TOTAL</div>';
+  html += '</div>';
+
+  // ── Section A: Summary Operations ──
+  html += renderSection(data, days, 'Summary Operations', [
+    { label: 'Produksi Total (ton)', key: 'prod', hasAch: true },
+    { label: 'DT Beroperasi', key: 'dt', hasAch: true },
+    { label: 'PA — Physical Availability (%)', key: 'pa', hasAch: true, pct: true },
+    { label: 'UA — Use of Availability (%)', key: 'ua', hasAch: true, pct: true },
+  ]);
+
+  // ── Section B: Jam Kerja (Waterfall EWH) ──
+  html += renderSection(data, days, 'Jam Kerja — Waterfall EWH', [
+    { label: 'Jam Tersedia (jam)', key: 'jamTersedia', hasAch: false },
+    { label: '⚙ EWH (jam)', key: 'ewh', hasAch: true },
+    { label: '🔧 Breakdown (jam)', key: 'breakdown', hasAch: false },
+    { label: '⏸ Total Standby selain BD (jam)', key: 'totalStandby', hasAch: false },
+    { label: '🌧 1. Rain', key: 'rain', hasAch: false, icon: '🌧' },
+    { label: '👤🚫 2. No Driver', key: 'noDriver', hasAch: false, icon: '👤🚫' },
+    { label: '⚠ 3. Delay Tanpa Keterangan', key: 'dtk', hasAch: false, icon: '⚠', badge: 'Selisih Sistem' },
+    { label: '🍽 4. Istirahat & Jumat', key: 'istirahat', hasAch: false, icon: '🍽' },
+    { label: '🔄 5. Change Shift', key: 'changeShift', hasAch: false, icon: '🔄' },
+    { label: '🦺 6. P5M / P2H / Perbaikan LP', key: 'p5m', hasAch: false, icon: '🦺' },
+    { label: '📅 7. Sunday Break / Holiday Break', key: 'sunday', hasAch: false, icon: '📅' },
+  ]);
+
+  document.getElementById('soGrid').innerHTML = html;
+}
+
+function renderSection(data, days, sectionTitle, metrics) {
+  let html = '';
+  html += '<div class="so-section-row"><div class="so-section-label">' + sectionTitle + '</div></div>';
+
+  metrics.forEach(m => {
+    // Aktual row
+    html += '<div class="so-row">';
+    html += '<div class="so-cell label">' + (m.icon ? m.icon + ' ' : '') + m.label;
+    if (m.badge) html += '<span class="delay-badge" title="Nilai ini seharusnya 0. Jika tidak, hubungi admin sistem untuk audit data delay.">' + m.badge + '</span>';
+    html += '</div>';
+    let totalA = 0;
+    data.forEach((d, idx) => {
+      const val = d[m.key] ? d[m.key].a : 0;
+      totalA += val;
+      let cls = 'so-cell';
+      const planVal = d[m.key] ? d[m.key].p : 0;
+      // Aktual = 0 & Plan > 0 flag for key metrics
+      if ((m.key === 'prod' || m.key === 'dt' || m.key === 'pa' || m.key === 'ua' || m.key === 'ewh') && val === 0 && planVal > 0) {
+        cls += ' data-missing';
+      }
+      html += '<div class="' + cls + '" title="' + (val === 0 && planVal > 0 ? 'Tidak ada data tercatat — periksa apakah shift dibuka pada tanggal ini.' : '') + '">' + formatVal(val, m) + '</div>';
+    });
+    html += '<div class="so-cell total">' + formatVal(totalA, m) + '</div>';
+    html += '</div>';
+
+    // Plan row (unless no plan)
+    html += '<div class="so-row plan-row">';
+    html += '<div class="so-cell label" style="padding-left:28px;font-size:11px;color:var(--text-muted)">Plan</div>';
+    let totalP = 0;
+    data.forEach(d => {
+      const val = d[m.key] ? d[m.key].p : 0;
+      totalP += val;
+      html += '<div class="so-cell">' + formatVal(val, m) + '</div>';
+    });
+    html += '<div class="so-cell total" style="background:var(--cream-light)">' + formatVal(totalP, m) + '</div>';
+    html += '</div>';
+
+    // Ach % row (only for hasAch metrics)
+    if (m.hasAch) {
+      html += '<div class="so-row ach-row">';
+      html += '<div class="so-cell label" style="padding-left:28px;font-size:11px">Ach (%)</div>';
+      let totalAchVal = 0; let totalAchCount = 0;
+      data.forEach(d => {
+        const a = d[m.key] ? d[m.key].a : 0;
+        const p = d[m.key] ? d[m.key].p : 0;
+        let ach = p > 0 ? (a / p) * 100 : 0;
+        if (p > 0) { totalAchVal += ach; totalAchCount++; }
+        let cls = 'so-cell';
+        if (ach >= 100) cls += ' ach-green';
+        else if (ach > 0 && ach < 70) cls += ' ach-red';
+        else if (ach === 0 && p > 0) cls += ' ach-zero';
+        html += '<div class="' + cls + '">' + ach.toFixed(1) + '%</div>';
+      });
+      const avgAch = totalAchCount > 0 ? (totalAchVal / totalAchCount) : 0;
+      let totalCls = 'so-cell total';
+      if (avgAch >= 100) totalCls += ' ach-green';
+      else if (avgAch > 0 && avgAch < 70) totalCls += ' ach-red';
+      else if (avgAch === 0) totalCls += ' ach-zero';
+      html += '<div class="' + totalCls + '">' + avgAch.toFixed(1) + '%</div>';
+      html += '</div>';
+    }
+  });
+  return html;
+}
+
+function formatVal(val, m) {
+  if (m.pct) return (val * 100).toFixed(1) + '%';
+  if (m.key === 'prod') return val.toLocaleString();
+  if (val === 0) return '0';
+  if (Number.isInteger(val)) return val.toString();
+  return val.toFixed(1);
+}
+
+// ─── Tooltip handler ───────────────────────────────────────────
+
+// ─── Init ──────────────────────────────────────────────────────
+renderSO();
+</script>
+</body>
+</html>

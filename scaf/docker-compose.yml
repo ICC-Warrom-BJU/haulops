@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: haulops
+      POSTGRES_USER: haulops
+      POSTGRES_PASSWORD: haulops_dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U haulops -d haulops"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ./packages/server
+      dockerfile: Dockerfile
+    ports:
+      - '4002:4001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://haulops:haulops_dev@postgres:5432/haulops
+      JWT_SECRET: dev-secret-key-change-in-production
+    volumes:
+      - ./packages/server/src:/app/src
+      - ./packages/server/prisma:/app/prisma
+      - ./packages/server/package.json:/app/package.json
+
+  web:
+    build:
+      context: ./packages/web
+      dockerfile: Dockerfile
+    ports:
+      - '5174:5173'
+    depends_on:
+      - server
+    environment:
+      VITE_API_URL: http://localhost:4002/api/v1
+    volumes:
+      - ./packages/web/src:/app/src
+      - ./packages/web/index.html:/app/index.html
+      - ./packages/web/package.json:/app/package.json
+
+volumes:
+  pgdata:

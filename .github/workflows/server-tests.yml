@@ -1,0 +1,123 @@
+name: CI/CD Pipeline — HAULOPS
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ============================================================
+  # Job 1: TypeCheck Backend
+  # ============================================================
+  backend-typecheck:
+    name: 🔍 Backend — TypeCheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./scaf/packages/server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: scaf/packages/server/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+  # ============================================================
+  # Job 2: Build Frontend (validasi tidak ada error build)
+  # ============================================================
+  frontend-build:
+    name: 🏗️ Frontend — Build Vite
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./scaf/packages/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: scaf/packages/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Vite
+        run: npm run build
+        env:
+          # Gunakan placeholder agar build tidak gagal saat CI
+          VITE_API_URL: https://placeholder-api.example.com/api/v1
+
+  # ============================================================
+  # Job 3: Deploy Trigger (hanya berjalan di branch main)
+  # Railway & Render akan menerima webhook dari GitHub secara
+  # otomatis — job ini hanya memberikan notifikasi status.
+  # ============================================================
+  notify-deploy:
+    name: 🚀 Deploy — Triggered (main only)
+    needs: [backend-typecheck, frontend-build]
+    runs-on: ubuntu-latest
+    # Hanya jalankan di push ke main (bukan PR, bukan branch dev)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Ringkasan Deployment
+        run: |
+          echo "=================================================="
+          echo "✅ CI PASSED — Deploy otomatis sedang berjalan"
+          echo "=================================================="
+          echo ""
+          echo "Commit : ${{ github.sha }}"
+          echo "Oleh   : ${{ github.actor }}"
+          echo "Pesan  : ${{ github.event.head_commit.message }}"
+          echo ""
+          echo "Platform yang akan update otomatis:"
+          echo "  🚂 Railway  → Frontend (React/Vite via Nginx)"
+          echo "     https://railway.app/dashboard"
+          echo ""
+          echo "  🎨 Render   → Backend (Express + Prisma)"
+          echo "     https://dashboard.render.com"
+          echo ""
+          echo "  🟩 Supabase → Database (Prisma migrate deploy"
+          echo "     dijalankan otomatis saat container backend start)"
+          echo ""
+          echo "⚠️  Jika ada perubahan schema.prisma:"
+          echo "     Prisma akan otomatis migrasi saat backend restart."
+          echo "     Pastikan migration file sudah ada di prisma/migrations/"
+          echo "=================================================="
+
+  # ============================================================
+  # Job 4: Notifikasi jika push ke branch dev (bukan main)
+  # ============================================================
+  notify-dev:
+    name: ℹ️ Dev Branch — CI Only
+    needs: [backend-typecheck, frontend-build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+
+    steps:
+      - name: Info Branch Dev
+        run: |
+          echo "=================================================="
+          echo "✅ CI PASSED di branch 'dev'"
+          echo "=================================================="
+          echo "Deploy TIDAK dijalankan untuk branch dev."
+          echo "Buat Pull Request ke branch 'main' untuk deploy."
+          echo "=================================================="
