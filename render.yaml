@@ -9,8 +9,9 @@ services:
     dockerfilePath: ./scaf/packages/server/Dockerfile.prod
     dockerContext: ./scaf/packages/server
 
-    # Render Free Tier menggunakan region Oregon (us-west-2)
-    region: oregon
+    # Singapura — co-located dengan Supabase region Singapore (latency rendah
+    # untuk pengguna Indonesia). Ganti ke 'oregon' bila Singapore tak tersedia.
+    region: singapore
     plan: free
 
     # Health check agar Render tahu server sudah siap (route asli = /api/health)
